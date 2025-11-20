@@ -14,7 +14,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const connectDB = async () => {
     try {
         await mongoose.connect(process.env.MONGO_URI, {
-            autoIndex: false,
+            autoIndex: true,
         });
         console.log('✅ Connected to Firestore via MongoDB API!');
     } catch (err) {
@@ -25,7 +25,7 @@ const connectDB = async () => {
 
 // --- 2. Schemas ---
 const CafeSchema = new mongoose.Schema({
-    name: { type: String, required: true },
+    name: { type: String, required: true, unique: true },
     building: { type: String, required: true },
     cuisine: [String],
     isOpen: { type: Boolean, default: true },
@@ -58,7 +58,22 @@ app.post('/cafes', async (req, res) => {
         const savedCafe = await newCafe.save();
         res.status(201).json(savedCafe);
     } catch (err) {
-        res.status(400).json({ error: err.message });
+        if (err.code === 11000) {
+            res.status(400).json({ error: 'Cafe with this name already exists' });
+        } else {
+            res.status(400).json({ error: err.message });
+        }
+    }
+});
+
+app.delete('/cafes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await Cafe.findByIdAndDelete(id);
+        await Review.deleteMany({ cafeId: id });
+        res.json({ message: 'Cafe and associated reviews deleted' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -69,6 +84,30 @@ app.post('/reviews', async (req, res) => {
         res.status(201).json(newReview);
     } catch (err) {
         res.status(400).json({ error: err.message });
+    }
+});
+
+app.get('/stats', async (req, res) => {
+    try {
+        const totalRatings = await Review.countDocuments();
+
+        const avgResult = await Review.aggregate([
+            { $group: { _id: null, avgRating: { $avg: "$rating" } } }
+        ]);
+        const averageRating = avgResult.length > 0 ? avgResult[0].avgRating.toFixed(1) : 0;
+
+        const recentRatings = await Review.find()
+            .sort({ timestamp: -1 })
+            .limit(5)
+            .populate('cafeId', 'name');
+
+        res.json({
+            totalRatings,
+            averageRating,
+            recentRatings
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 

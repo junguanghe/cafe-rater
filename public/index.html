@@ -71,6 +71,27 @@
 
     <h1>☕ Google Cafe Rater</h1>
 
+    <!-- Rating Statistics -->
+    <div class="card">
+        <h3>📊 Rating Statistics</h3>
+        <div style="display: flex; justify-content: space-around; text-align: center;">
+            <div>
+                <h2 id="totalRatings">0</h2>
+                <p>Total Ratings</p>
+            </div>
+            <div>
+                <h2 id="averageRating">0.0</h2>
+                <p>Average Rating</p>
+            </div>
+        </div>
+        <div style="margin-top: 20px;">
+            <h4>🕒 Recent Ratings</h4>
+            <ul id="recentRatings" style="list-style: none; padding: 0;">
+                <li>Loading...</li>
+            </ul>
+        </div>
+    </div>
+
     <!-- Form to Add a New Cafe -->
     <div class="card">
         <h3>Add a New Cafe</h3>
@@ -96,9 +117,14 @@
             const list = document.getElementById('cafeList');
             list.innerHTML = cafes.map(cafe => `
                 <div class="cafe-item">
-                    <strong>${cafe.name}</strong> (Bldg ${cafe.building})
-                    <br>
-                    <span class="badge">${cafe.cuisine.join(', ')}</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>${cafe.name}</strong> (Bldg ${cafe.building})
+                            <br>
+                            <span class="badge">${cafe.cuisine.join(', ')}</span>
+                        </div>
+                        <button onclick="deleteCafe('${cafe._id}')" style="background: #dc3545; width: auto; padding: 5px 10px; font-size: 0.8em;">Delete</button>
+                    </div>
                     <div style="margin-top: 10px;">
                         <input type="number" id="rating-${cafe._id}" placeholder="1-5" style="width: 60px;">
                         <button onclick="rateCafe('${cafe._id}')" style="width: auto; padding: 5px 10px;">Rate</button>
@@ -107,22 +133,60 @@
             `).join('');
         }
 
+        async function deleteCafe(id) {
+            if (!confirm('Are you sure you want to delete this cafe? This will also delete all its reviews.')) {
+                return;
+            }
+
+            await fetch(`${API_URL}/cafes/${id}`, {
+                method: 'DELETE'
+            });
+
+            loadCafes();
+            loadStats();
+        }
+
         async function addCafe() {
             const name = document.getElementById('cafeName').value;
             const building = document.getElementById('building').value;
             const cuisine = document.getElementById('cuisine').value.split(',');
 
-            await fetch(`${API_URL}/cafes`, {
+            const response = await fetch(`${API_URL}/cafes`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, building, cuisine })
             });
 
-            // Clear inputs and reload list
-            document.getElementById('cafeName').value = '';
-            document.getElementById('building').value = '';
-            document.getElementById('cuisine').value = '';
-            loadCafes();
+            if (response.ok) {
+                // Clear inputs and reload list
+                document.getElementById('cafeName').value = '';
+                document.getElementById('building').value = '';
+                document.getElementById('cuisine').value = '';
+                loadCafes();
+            } else {
+                const errorData = await response.json();
+                alert(`Error: ${errorData.error}`);
+            }
+        }
+
+        async function loadStats() {
+            const response = await fetch(`${API_URL}/stats`);
+            const stats = await response.json();
+
+            document.getElementById('totalRatings').innerText = stats.totalRatings;
+            document.getElementById('averageRating').innerText = stats.averageRating;
+
+            const recentList = document.getElementById('recentRatings');
+            if (stats.recentRatings.length === 0) {
+                recentList.innerHTML = '<li>No ratings yet.</li>';
+            } else {
+                recentList.innerHTML = stats.recentRatings.map(r => `
+                    <li style="padding: 5px 0; border-bottom: 1px solid #eee;">
+                        <strong>${r.cafeId ? r.cafeId.name : 'Unknown Cafe'}</strong>: ${r.rating}⭐ 
+                        <span style="color: #666; font-size: 0.8em;">(${new Date(r.timestamp).toLocaleTimeString()})</span>
+                    </li>
+                `).join('');
+            }
         }
 
         async function rateCafe(id) {
@@ -133,10 +197,12 @@
                 body: JSON.stringify({ cafeId: id, rating: parseInt(rating) })
             });
             alert('Rating Saved!');
+            loadStats(); // Refresh stats after rating
         }
 
-        // Load cafes on startup
+        // Load cafes and stats on startup
         loadCafes();
+        loadStats();
     </script>
 </body>
 
