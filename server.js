@@ -35,7 +35,7 @@ const CafeSchema = new mongoose.Schema({
 const ReviewSchema = new mongoose.Schema({
     cafeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Cafe', required: true },
     rating: { type: Number, min: 1, max: 5, required: true },
-    comment: { type: String },
+    comment: { type: String, maxlength: 200 },
     timestamp: { type: Date, default: Date.now }
 });
 

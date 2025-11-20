@@ -130,6 +130,7 @@
                     </div>
                     <div style="margin-top: 10px;">
                         <input type="number" id="rating-${cafe._id}" placeholder="1-5" style="width: 60px;">
+                        <input type="text" id="comment-${cafe._id}" placeholder="Comment (max 200 chars)" maxlength="200" style="width: 200px;">
                         <button onclick="rateCafe('${cafe._id}')" style="width: auto; padding: 5px 10px;">Rate</button>
                     </div>
                 </div>
@@ -201,10 +202,12 @@
 
         async function rateCafe(id) {
             const rating = document.getElementById(`rating-${id}`).value;
+            const comment = document.getElementById(`comment-${id}`).value;
+
             await fetch(`${API_URL}/reviews`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cafeId: id, rating: parseInt(rating) })
+                body: JSON.stringify({ cafeId: id, rating: parseInt(rating), comment })
             });
             alert('Rating Saved!');
             // Refresh stats if we are currently viewing this cafe
@@ -212,6 +215,10 @@
             if (currentTitle.includes('Stats for')) {
                 viewCafeStats(id);
             }
+
+            // Clear inputs
+            document.getElementById(`rating-${id}`).value = '';
+            document.getElementById(`comment-${id}`).value = '';
         }
 
         // Load cafes on startup
