@@ -87,6 +87,38 @@ app.post('/reviews', async (req, res) => {
     }
 });
 
+app.get('/cafes/:id/stats', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const cafe = await Cafe.findById(id);
+        if (!cafe) {
+            return res.status(404).json({ error: 'Cafe not found' });
+        }
+
+        const totalRatings = await Review.countDocuments({ cafeId: id });
+
+        const avgResult = await Review.aggregate([
+            { $match: { cafeId: new mongoose.Types.ObjectId(id) } },
+            { $group: { _id: null, avgRating: { $avg: "$rating" } } }
+        ]);
+        const averageRating = avgResult.length > 0 ? avgResult[0].avgRating.toFixed(1) : 0;
+
+        const recentRatings = await Review.find({ cafeId: id })
+            .sort({ timestamp: -1 })
+            .limit(5)
+            .populate('cafeId', 'name');
+
+        res.json({
+            cafeName: cafe.name,
+            totalRatings,
+            averageRating,
+            recentRatings
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.get('/stats', async (req, res) => {
     try {
         const totalRatings = await Review.countDocuments();

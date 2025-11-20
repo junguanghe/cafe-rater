@@ -73,22 +73,24 @@
 
     <!-- Rating Statistics -->
     <div class="card">
-        <h3>📊 Rating Statistics</h3>
-        <div style="display: flex; justify-content: space-around; text-align: center;">
-            <div>
-                <h2 id="totalRatings">0</h2>
-                <p>Total Ratings</p>
+        <h3 id="statsTitle">📊 Select a cafe to view statistics</h3>
+        <div id="statsContent" style="display: none;">
+            <div style="display: flex; justify-content: space-around; text-align: center;">
+                <div>
+                    <h2 id="totalRatings">0</h2>
+                    <p>Total Ratings</p>
+                </div>
+                <div>
+                    <h2 id="averageRating">0.0</h2>
+                    <p>Average Rating</p>
+                </div>
             </div>
-            <div>
-                <h2 id="averageRating">0.0</h2>
-                <p>Average Rating</p>
+            <div style="margin-top: 20px;">
+                <h4>🕒 Recent Ratings</h4>
+                <ul id="recentRatings" style="list-style: none; padding: 0;">
+                    <li>Loading...</li>
+                </ul>
             </div>
-        </div>
-        <div style="margin-top: 20px;">
-            <h4>🕒 Recent Ratings</h4>
-            <ul id="recentRatings" style="list-style: none; padding: 0;">
-                <li>Loading...</li>
-            </ul>
         </div>
     </div>
 
@@ -123,6 +125,7 @@
                             <br>
                             <span class="badge">${cafe.cuisine.join(', ')}</span>
                         </div>
+                        <button onclick="viewCafeStats('${cafe._id}')" style="background: #34a853; width: auto; padding: 5px 10px; font-size: 0.8em; margin-right: 5px;">View Stats</button>
                         <button onclick="deleteCafe('${cafe._id}')" style="background: #dc3545; width: auto; padding: 5px 10px; font-size: 0.8em;">Delete</button>
                     </div>
                     <div style="margin-top: 10px;">
@@ -143,7 +146,9 @@
             });
 
             loadCafes();
-            loadStats();
+            // Reset stats if the deleted cafe was being viewed
+            document.getElementById('statsTitle').innerText = '📊 Select a cafe to view statistics';
+            document.getElementById('statsContent').style.display = 'none';
         }
 
         async function addCafe() {
@@ -169,9 +174,12 @@
             }
         }
 
-        async function loadStats() {
-            const response = await fetch(`${API_URL}/stats`);
+        async function viewCafeStats(id) {
+            const response = await fetch(`${API_URL}/cafes/${id}/stats`);
             const stats = await response.json();
+
+            document.getElementById('statsTitle').innerText = `📊 Stats for ${stats.cafeName}`;
+            document.getElementById('statsContent').style.display = 'block';
 
             document.getElementById('totalRatings').innerText = stats.totalRatings;
             document.getElementById('averageRating').innerText = stats.averageRating;
@@ -182,8 +190,10 @@
             } else {
                 recentList.innerHTML = stats.recentRatings.map(r => `
                     <li style="padding: 5px 0; border-bottom: 1px solid #eee;">
-                        <strong>${r.cafeId ? r.cafeId.name : 'Unknown Cafe'}</strong>: ${r.rating}⭐ 
+                        ${r.rating}⭐
                         <span style="color: #666; font-size: 0.8em;">(${new Date(r.timestamp).toLocaleTimeString()})</span>
+                        <br>
+                        <span style="font-style: italic; color: #555;">"${r.comment || ''}"</span>
                     </li>
                 `).join('');
             }
@@ -197,13 +207,17 @@
                 body: JSON.stringify({ cafeId: id, rating: parseInt(rating) })
             });
             alert('Rating Saved!');
-            loadStats(); // Refresh stats after rating
+            // Refresh stats if we are currently viewing this cafe
+            const currentTitle = document.getElementById('statsTitle').innerText;
+            if (currentTitle.includes('Stats for')) {
+                viewCafeStats(id);
+            }
         }
 
-        // Load cafes and stats on startup
+        // Load cafes on startup
         loadCafes();
-        loadStats();
     </script>
 </body>
 
 </html>
+```
