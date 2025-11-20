@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Cafe Rater</title>
+    <style>
+        body {
+            font-family: 'Google Sans', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #1a73e8;
+        }
+
+        input,
+        select,
+        button {
+            padding: 10px;
+            margin: 5px 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #1557b0;
+        }
+
+        .cafe-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .cafe-item {
+            border-bottom: 1px solid #eee;
+            padding: 15px 0;
+        }
+
+        .badge {
+            background: #e8f0fe;
+            color: #1a73e8;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>☕ Google Cafe Rater</h1>
+
+    <!-- Form to Add a New Cafe -->
+    <div class="card">
+        <h3>Add a New Cafe</h3>
+        <input type="text" id="cafeName" placeholder="Cafe Name (e.g. Charlie's)">
+        <input type="text" id="building" placeholder="Building (e.g. 43)">
+        <input type="text" id="cuisine" placeholder="Cuisine (e.g. Sushi, Pizza)">
+        <button onclick="addCafe()">Add Cafe</button>
+    </div>
+
+    <!-- List of Cafes -->
+    <div class="card">
+        <h3>All Cafes</h3>
+        <div id="cafeList">Loading...</div>
+    </div>
+
+    <!-- Simple Script to talk to your Backend -->
+    <script>
+        const API_URL = 'http://localhost:3000';
+
+        async function loadCafes() {
+            const response = await fetch(`${API_URL}/cafes`);
+            const cafes = await response.json();
+            const list = document.getElementById('cafeList');
+            list.innerHTML = cafes.map(cafe => `
+                <div class="cafe-item">
+                    <strong>${cafe.name}</strong> (Bldg ${cafe.building})
+                    <br>
+                    <span class="badge">${cafe.cuisine.join(', ')}</span>
+                    <div style="margin-top: 10px;">
+                        <input type="number" id="rating-${cafe._id}" placeholder="1-5" style="width: 60px;">
+                        <button onclick="rateCafe('${cafe._id}')" style="width: auto; padding: 5px 10px;">Rate</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function addCafe() {
+            const name = document.getElementById('cafeName').value;
+            const building = document.getElementById('building').value;
+            const cuisine = document.getElementById('cuisine').value.split(',');
+
+            await fetch(`${API_URL}/cafes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, building, cuisine })
+            });
+
+            // Clear inputs and reload list
+            document.getElementById('cafeName').value = '';
+            document.getElementById('building').value = '';
+            document.getElementById('cuisine').value = '';
+            loadCafes();
+        }
+
+        async function rateCafe(id) {
+            const rating = document.getElementById(`rating-${id}`).value;
+            await fetch(`${API_URL}/reviews`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cafeId: id, rating: parseInt(rating) })
+            });
+            alert('Rating Saved!');
+        }
+
+        // Load cafes on startup
+        loadCafes();
+    </script>
+</body>
+
+</html>
