@@ -89,6 +89,23 @@
 
     <!-- Form to Add a New Cafe -->
     <div class="card">
+        <h3>Cafe Ratings Summary</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f1f3f4; text-align: left;">
+                    <th style="padding: 10px; border-bottom: 1px solid #ddd;">Cafe Name</th>
+                    <th style="padding: 10px; border-bottom: 1px solid #ddd;">Average Rating</th>
+                    <th style="padding: 10px; border-bottom: 1px solid #ddd;"># Reviews</th>
+                    <th style="padding: 10px; border-bottom: 1px solid #ddd;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="cafeStatsTableBody">
+                <!-- Rows will be populated here -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
         <h3>Add a New Cafe</h3>
         <input type="text" id="cafeName" placeholder="Cafe Name (e.g. Charlie's)">
         <input type="text" id="building" placeholder="Building (e.g. 43)">
@@ -112,6 +129,8 @@
         </div>
     </div>
 
+
+
     <div class="card">
         <h3>All Cafes</h3>
         <div id="cafeList">Loading...</div>
@@ -124,6 +143,24 @@
         async function loadCafes() {
             const response = await fetch(`${API_URL}/cafes`);
             const cafes = await response.json();
+
+            // Populate Summary Table
+            const tableBody = document.getElementById('cafeStatsTableBody');
+            if (tableBody) {
+                tableBody.innerHTML = cafes.map(cafe => `
+                    <tr>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee;">${cafe.name}</td>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                            <span style="color: #fbbc04; font-weight: bold;">${cafe.averageRating}⭐</span>
+                        </td>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee;">${cafe.totalRatings}</td>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                            <button onclick="viewCafeStats('${cafe._id}')" style="background: #34a853; width: auto; padding: 5px 10px; font-size: 0.8em;">Stats</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
             const list = document.getElementById('cafeList');
             list.innerHTML = cafes.map(cafe => `
                 <div class="cafe-item">
@@ -132,7 +169,6 @@
                             <strong>${cafe.name}</strong> (Bldg ${cafe.building})
                         </div>
                         <div>
-                            <button onclick="viewCafeStats('${cafe._id}')" style="background: #34a853; width: auto; padding: 5px 10px; font-size: 0.8em; margin-right: 5px;">Stats</button>
                             <button onclick="deleteCafe('${cafe._id}')" style="background: #dc3545; width: auto; padding: 5px 10px; font-size: 0.8em;">Delete</button>
                         </div>
                     </div>
@@ -152,7 +188,6 @@
                                             </div>
                                         </div>
                                         <div>
-                                            <button onclick="viewItemStats('${item._id}')" style="background: #34a853; color: white; border: none; padding: 3px 8px; border-radius: 3px; cursor: pointer; font-size: 0.75em; margin-right: 5px;">Stats</button>
                                             <button onclick="deleteItem('${cafe._id}', '${item._id}')" style="background: #dc3545; color: white; border: none; padding: 3px 8px; border-radius: 3px; cursor: pointer; font-size: 0.75em;">Delete</button>
                                         </div>
                                     </div>
@@ -382,6 +417,7 @@
                                 <div style="font-size: 0.8em; color: #666;">
                                     ${item.totalRatings} rating${item.totalRatings !== 1 ? 's' : ''}
                                 </div>
+                                <button onclick="viewItemStats('${item._id}')" style="background: #34a853; color: white; border: none; padding: 3px 8px; border-radius: 3px; cursor: pointer; font-size: 0.75em; margin-top: 5px;">Stats</button>
                             </div>
                         </div>
                     `).join('');

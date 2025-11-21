@@ -56,10 +56,27 @@ def serve_index():
 def get_cafes():
     try:
         cafes = list(cafes_collection.find())
-        # Populate items for each cafe
+        # Populate items and stats for each cafe
         for cafe in cafes:
-            cafe_items = list(items_collection.find({'cafeId': cafe['_id']}))
+            cafe_id = cafe['_id']
+            
+            # Items
+            cafe_items = list(items_collection.find({'cafeId': cafe_id}))
             cafe['items'] = [serialize_doc(item) for item in cafe_items]
+            
+            # Stats
+            total_ratings = cafe_reviews_collection.count_documents({'cafeId': cafe_id})
+            
+            pipeline = [
+                {'$match': {'cafeId': cafe_id}},
+                {'$group': {'_id': None, 'avgRating': {'$avg': '$rating'}}}
+            ]
+            avg_result = list(cafe_reviews_collection.aggregate(pipeline))
+            average_rating = round(avg_result[0]['avgRating'], 1) if avg_result and len(avg_result) > 0 else 0.0
+            
+            cafe['totalRatings'] = total_ratings
+            cafe['averageRating'] = average_rating
+
         return jsonify([serialize_doc(cafe) for cafe in cafes])
     except Exception as e:
         return jsonify({'error': str(e)}), 500

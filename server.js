@@ -60,12 +60,26 @@ const ItemReview = mongoose.model('ItemReview', ItemReviewSchema);
 app.get('/cafes', async (req, res) => {
     try {
         const cafes = await Cafe.find();
-        // Populate items for each cafe
-        const cafesWithItems = await Promise.all(cafes.map(async (cafe) => {
+        // Populate items and stats for each cafe
+        const cafesWithData = await Promise.all(cafes.map(async (cafe) => {
             const items = await Item.find({ cafeId: cafe._id });
-            return { ...cafe.toObject(), items };
+
+            // Calculate stats
+            const totalRatings = await CafeReview.countDocuments({ cafeId: cafe._id });
+            const avgResult = await CafeReview.aggregate([
+                { $match: { cafeId: cafe._id } },
+                { $group: { _id: null, avgRating: { $avg: "$rating" } } }
+            ]);
+            const averageRating = avgResult.length > 0 ? parseFloat(avgResult[0].avgRating.toFixed(1)) : 0.0;
+
+            return {
+                ...cafe.toObject(),
+                items,
+                totalRatings,
+                averageRating
+            };
         }));
-        res.json(cafesWithItems);
+        res.json(cafesWithData);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
