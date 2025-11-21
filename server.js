@@ -28,7 +28,9 @@ const CafeSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
     building: { type: String, required: true },
     items: [{
-        name: { type: String, required: true }
+        name: { type: String, required: true },
+        price: { type: Number, default: 0.0 },
+        type: { type: String, default: 'other' }
     }]
 });
 
@@ -70,13 +72,17 @@ app.post('/cafes', async (req, res) => {
 app.post('/cafes/:id/items', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name } = req.body;
+        const { name, price, type } = req.body;
         if (!name) return res.status(400).json({ error: 'Item name is required' });
 
         const cafe = await Cafe.findById(id);
         if (!cafe) return res.status(404).json({ error: 'Cafe not found' });
 
-        cafe.items.push({ name });
+        cafe.items.push({
+            name,
+            price: price || 0.0,
+            type: type || 'other'
+        });
         await cafe.save();
         res.status(201).json(cafe);
     } catch (err) {

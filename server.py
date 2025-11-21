@@ -91,7 +91,9 @@ def add_item(cafe_id):
         # Create new item with its own ObjectId
         new_item = {
             '_id': ObjectId(),
-            'name': data['name']
+            'name': data['name'],
+            'price': data.get('price', 0.0),  # Default to 0.0 if not provided
+            'type': data.get('type', 'other')  # Default to 'other' if not provided
         }
 
         result = cafes_collection.update_one(

@@ -134,7 +134,15 @@
                         <ul style="list-style: none; padding: 0;">
                             ${cafe.items && cafe.items.length > 0 ? cafe.items.map(item => `
                                 <li style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #eee;">
-                                    <div style="font-weight: bold; margin-bottom: 5px;">${item.name}</div>
+                                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 5px;">
+                                        <div>
+                                            <div style="font-weight: bold;">${item.name}</div>
+                                            <div style="font-size: 0.85em; color: #666;">
+                                                <span class="badge" style="margin-right: 5px;">${item.type || 'other'}</span>
+                                                <span style="color: #34a853; font-weight: bold;">$${(item.price || 0).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <div style="display: flex; gap: 5px;">
                                         <input type="number" id="rating-item-${item._id}" placeholder="1-5" style="width: 50px; padding: 5px;">
                                         <input type="text" id="comment-item-${item._id}" placeholder="Comment..." style="width: 150px; padding: 5px;">
@@ -143,9 +151,19 @@
                                 </li>
                             `).join('') : '<li style="color: #777;">No items yet.</li>'}
                         </ul>
-                        <div style="display: flex; gap: 5px; margin-top: 10px;">
-                            <input type="text" id="newItem-${cafe._id}" placeholder="New Item Name" style="width: 200px;">
-                            <button onclick="addItem('${cafe._id}')" style="width: auto; padding: 5px 10px;">Add Item</button>
+                        <div style="margin-top: 10px;">
+                            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                                <input type="text" id="newItem-${cafe._id}" placeholder="Item Name" style="width: 150px;">
+                                <input type="number" id="newItemPrice-${cafe._id}" placeholder="Price" step="0.01" style="width: 80px;">
+                                <select id="newItemType-${cafe._id}" style="width: 100px;">
+                                    <option value="entree">Entree</option>
+                                    <option value="drink">Drink</option>
+                                    <option value="side">Side</option>
+                                    <option value="dessert">Dessert</option>
+                                    <option value="other">Other</option>
+                                </select>
+                                <button onclick="addItem('${cafe._id}')" style="width: auto; padding: 5px 10px;">Add Item</button>
+                            </div>
                         </div>
                     </div>
 
@@ -200,17 +218,25 @@
 
         async function addItem(cafeId) {
             const nameInput = document.getElementById(`newItem-${cafeId}`);
+            const priceInput = document.getElementById(`newItemPrice-${cafeId}`);
+            const typeInput = document.getElementById(`newItemType-${cafeId}`);
+
             const name = nameInput.value;
+            const price = parseFloat(priceInput.value) || 0.0;
+            const type = typeInput.value;
+
             if (!name) return;
 
             const response = await fetch(`${API_URL}/cafes/${cafeId}/items`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name })
+                body: JSON.stringify({ name, price, type })
             });
 
             if (response.ok) {
                 nameInput.value = '';
+                priceInput.value = '';
+                typeInput.value = 'entree';
                 loadCafes();
             } else {
                 const errorData = await response.json();
