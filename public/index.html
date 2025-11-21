@@ -71,34 +71,18 @@
 
     <h1>☕ Google Cafe Rater</h1>
 
-    <!-- Rating Statistics -->
-    <div class="card">
-        <h3 id="statsTitle">📊 Select a cafe to view statistics</h3>
-        <div id="statsContent" style="display: none;">
-            <div style="display: flex; justify-content: space-around; text-align: center;">
-                <div>
-                    <h2 id="totalRatings">0</h2>
-                    <p>Total Cafe Ratings</p>
-                </div>
-                <div>
-                    <h2 id="averageRating">0.0</h2>
-                    <p>Average Cafe Rating</p>
-                </div>
-            </div>
-
-            <!-- Items Section -->
-            <div style="margin-top: 20px;">
-                <h4>🍽️ Menu Items</h4>
-                <div id="itemsStats" style="padding: 0;">
-                    <p style="color: #777;">No items yet.</p>
-                </div>
-            </div>
-
-            <div style="margin-top: 20px;">
-                <h4>🕒 Recent Cafe Ratings</h4>
-                <ul id="recentRatings" style="list-style: none; padding: 0;">
-                    <li>Loading...</li>
-                </ul>
+    <!-- Cafe Stats Modal -->
+    <div id="cafeStatsModal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div
+            style="background: white; margin: 5% auto; padding: 20px; width: 90%; max-width: 600px; border-radius: 8px; position: relative; max-height: 90vh; overflow-y: auto;">
+            <button onclick="closeCafeStats()"
+                style="position: absolute; top: 10px; right: 10px; border: none; background: #f44336; color: white; border-radius: 50%; width: 30px; height: 30px; font-size: 1.2em; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
+            <h3 id="cafeStatsTitle" style="margin-top: 0;">Cafe Stats</h3>
+            <div id="cafeStatsContent">Loading...</div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="closeCafeStats()"
+                    style="background: #666; width: auto; padding: 8px 20px;">Close</button>
             </div>
         </div>
     </div>
@@ -112,6 +96,22 @@
     </div>
 
     <!-- List of Cafes -->
+    <!-- Item Stats Modal -->
+    <div id="itemStatsModal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div
+            style="background: white; margin: 10% auto; padding: 20px; width: 80%; max-width: 500px; border-radius: 8px; position: relative;">
+            <button onclick="closeItemStats()"
+                style="position: absolute; top: 10px; right: 10px; border: none; background: #f44336; color: white; border-radius: 50%; width: 30px; height: 30px; font-size: 1.2em; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
+            <h3 id="itemStatsTitle" style="margin-top: 0;">Item Stats</h3>
+            <div id="itemStatsContent">Loading...</div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="closeItemStats()"
+                    style="background: #666; width: auto; padding: 8px 20px;">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div class="card">
         <h3>All Cafes</h3>
         <div id="cafeList">Loading...</div>
@@ -132,7 +132,7 @@
                             <strong>${cafe.name}</strong> (Bldg ${cafe.building})
                         </div>
                         <div>
-                            <button onclick="viewCafeStats('${cafe._id}')" style="background: #34a853; width: auto; padding: 5px 10px; font-size: 0.8em; margin-right: 5px;">View Stats</button>
+                            <button onclick="viewCafeStats('${cafe._id}')" style="background: #34a853; width: auto; padding: 5px 10px; font-size: 0.8em; margin-right: 5px;">Stats</button>
                             <button onclick="deleteCafe('${cafe._id}')" style="background: #dc3545; width: auto; padding: 5px 10px; font-size: 0.8em;">Delete</button>
                         </div>
                     </div>
@@ -150,6 +150,10 @@
                                                 <span class="badge" style="margin-right: 5px;">${item.type || 'other'}</span>
                                                 <span style="color: #34a853; font-weight: bold;">$${(item.price || 0).toFixed(2)}</span>
                                             </div>
+                                        </div>
+                                        <div>
+                                            <button onclick="viewItemStats('${item._id}')" style="background: #34a853; color: white; border: none; padding: 3px 8px; border-radius: 3px; cursor: pointer; font-size: 0.75em; margin-right: 5px;">Stats</button>
+                                            <button onclick="deleteItem('${cafe._id}', '${item._id}')" style="background: #dc3545; color: white; border: none; padding: 3px 8px; border-radius: 3px; cursor: pointer; font-size: 0.75em;">Delete</button>
                                         </div>
                                     </div>
                                     <div style="display: flex; gap: 5px;">
@@ -199,9 +203,8 @@
             });
 
             loadCafes();
-            // Reset stats if the deleted cafe was being viewed
-            document.getElementById('statsTitle').innerText = '📊 Select a cafe to view statistics';
-            document.getElementById('statsContent').style.display = 'none';
+            // Close modal if open
+            closeCafeStats();
         }
 
         async function addCafe() {
@@ -280,52 +283,151 @@
             commentInput.value = '';
         }
 
-        async function viewCafeStats(id) {
-            const response = await fetch(`${API_URL}/cafes/${id}/stats`);
-            const stats = await response.json();
-
-            document.getElementById('statsTitle').innerText = `📊 Stats for ${stats.cafeName}`;
-            document.getElementById('statsContent').style.display = 'block';
-
-            document.getElementById('totalRatings').innerText = stats.totalRatings;
-            document.getElementById('averageRating').innerText = stats.averageRating;
-
-            // Display items with their ratings
-            const itemsDiv = document.getElementById('itemsStats');
-            if (!stats.items || stats.items.length === 0) {
-                itemsDiv.innerHTML = '<p style="color: #777;">No items yet.</p>';
-            } else {
-                itemsDiv.innerHTML = stats.items.map(item => `
-                    <div style="padding: 10px; margin: 5px 0; background: #f8f9fa; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <strong>${item.name}</strong>
-                            <span class="badge" style="margin-left: 5px;">${item.type}</span>
-                            <span style="color: #34a853; margin-left: 10px;">$${(item.price || 0).toFixed(2)}</span>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 1.2em; font-weight: bold; color: #1a73e8;">
-                                ${item.averageRating}⭐
-                            </div>
-                            <div style="font-size: 0.8em; color: #666;">
-                                ${item.totalRatings} rating${item.totalRatings !== 1 ? 's' : ''}
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
+        async function deleteItem(cafeId, itemId) {
+            if (!confirm('Are you sure you want to delete this item? This will also delete all its reviews.')) {
+                return;
             }
 
-            const recentList = document.getElementById('recentRatings');
-            if (stats.recentRatings.length === 0) {
-                recentList.innerHTML = '<li>No ratings yet.</li>';
+            const response = await fetch(`${API_URL}/items/${itemId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                loadCafes();
             } else {
-                recentList.innerHTML = stats.recentRatings.map(r => `
-                    <li style="padding: 5px 0; border-bottom: 1px solid #eee;">
-                        ${r.rating}⭐
-                        <span style="color: #666; font-size: 0.8em;">(${new Date(r.timestamp).toLocaleTimeString()})</span>
-                        <br>
-                        <span style="font-style: italic; color: #555;">"${r.comment || ''}"</span>
-                    </li>
-                `).join('');
+                const errorData = await response.json();
+                alert(`Error: ${errorData.error}`);
+            }
+        }
+
+        async function viewItemStats(itemId) {
+            document.getElementById('itemStatsModal').style.display = 'block';
+            document.getElementById('itemStatsContent').innerHTML = 'Loading...';
+
+            try {
+                const response = await fetch(`${API_URL}/items/${itemId}/stats`);
+                const stats = await response.json();
+
+                document.getElementById('itemStatsTitle').innerText = `📊 Stats for ${stats.item.name}`;
+
+                let reviewsHtml = '';
+                if (stats.reviews.length === 0) {
+                    reviewsHtml = '<p style="color: #777;">No reviews yet.</p>';
+                } else {
+                    reviewsHtml = '<ul style="list-style: none; padding: 0;">' +
+                        stats.reviews.map(r => `
+                            <li style="padding: 10px 0; border-bottom: 1px solid #eee;">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: #fbbc04; font-weight: bold;">${r.rating}⭐</span>
+                                    <span style="color: #666; font-size: 0.8em;">${new Date(r.timestamp).toLocaleDateString()}</span>
+                                </div>
+                                <div style="font-style: italic; color: #555; margin-top: 5px;">"${r.comment || ''}"</div>
+                            </li>
+                        `).join('') +
+                        '</ul>';
+                }
+
+                document.getElementById('itemStatsContent').innerHTML = `
+                    <div style="text-align: center; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <div style="font-size: 2.5em; font-weight: bold; color: #1a73e8;">${stats.averageRating}</div>
+                        <div style="color: #666;">Average Rating</div>
+                        <div style="font-size: 0.9em; color: #888;">(${stats.totalRatings} total ratings)</div>
+                        <div style="margin-top: 10px;">
+                            <span class="badge">${stats.item.type}</span>
+                            <span style="color: #34a853; font-weight: bold; margin-left: 10px;">$${(stats.item.price || 0).toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <h4>Recent Reviews</h4>
+                    ${reviewsHtml}
+                `;
+            } catch (err) {
+                document.getElementById('itemStatsContent').innerHTML = `<p style="color: red;">Error loading stats: ${err.message}</p>`;
+            }
+        }
+
+        function closeItemStats() {
+            document.getElementById('itemStatsModal').style.display = 'none';
+        }
+
+        function closeCafeStats() {
+            document.getElementById('cafeStatsModal').style.display = 'none';
+        }
+
+        async function viewCafeStats(id) {
+            document.getElementById('cafeStatsModal').style.display = 'block';
+            document.getElementById('cafeStatsContent').innerHTML = 'Loading...';
+
+            try {
+                const response = await fetch(`${API_URL}/cafes/${id}/stats`);
+                const stats = await response.json();
+
+                document.getElementById('cafeStatsTitle').innerText = `📊 Stats for ${stats.cafeName}`;
+
+                // Items HTML
+                let itemsHtml = '';
+                if (!stats.items || stats.items.length === 0) {
+                    itemsHtml = '<p style="color: #777;">No items yet.</p>';
+                } else {
+                    itemsHtml = stats.items.map(item => `
+                        <div style="padding: 10px; margin: 5px 0; background: #f8f9fa; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>${item.name}</strong>
+                                <span class="badge" style="margin-left: 5px;">${item.type}</span>
+                                <span style="color: #34a853; margin-left: 10px;">$${(item.price || 0).toFixed(2)}</span>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 1.2em; font-weight: bold; color: #1a73e8;">
+                                    ${item.averageRating}⭐
+                                </div>
+                                <div style="font-size: 0.8em; color: #666;">
+                                    ${item.totalRatings} rating${item.totalRatings !== 1 ? 's' : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+                // Recent Ratings HTML
+                let recentHtml = '';
+                if (stats.recentRatings.length === 0) {
+                    recentHtml = '<li>No ratings yet.</li>';
+                } else {
+                    recentHtml = stats.recentRatings.map(r => `
+                        <li style="padding: 5px 0; border-bottom: 1px solid #eee;">
+                            <strong>${r.rating}⭐</strong> - "${r.comment}" 
+                            <span style="color: #888; font-size: 0.8em;">(${new Date(r.timestamp).toLocaleDateString()})</span>
+                        </li>
+                    `).join('');
+                }
+
+                document.getElementById('cafeStatsContent').innerHTML = `
+                    <div style="display: flex; justify-content: space-around; text-align: center; margin-bottom: 20px;">
+                        <div>
+                            <h2 style="margin: 0; color: #1a73e8;">${stats.totalRatings}</h2>
+                            <p style="margin: 5px 0; color: #666;">Total Cafe Ratings</p>
+                        </div>
+                        <div>
+                            <h2 style="margin: 0; color: #1a73e8;">${stats.averageRating}</h2>
+                            <p style="margin: 5px 0; color: #666;">Average Cafe Rating</p>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <h4>🍽️ Menu Items</h4>
+                        <div style="padding: 0;">
+                            ${itemsHtml}
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <h4>🕒 Recent Cafe Ratings</h4>
+                        <ul style="list-style: none; padding: 0;">
+                            ${recentHtml}
+                        </ul>
+                    </div>
+                `;
+            } catch (err) {
+                document.getElementById('cafeStatsContent').innerHTML = `<p style="color: red;">Error loading stats: ${err.message}</p>`;
             }
         }
 
@@ -350,8 +452,8 @@
             });
             alert('Rating Saved!');
             // Refresh stats if we are currently viewing this cafe
-            const currentTitle = document.getElementById('statsTitle').innerText;
-            if (currentTitle.includes('Stats for')) {
+            const modal = document.getElementById('cafeStatsModal');
+            if (modal.style.display === 'block') {
                 viewCafeStats(id);
             }
 

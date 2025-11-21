@@ -107,6 +107,52 @@ app.post('/cafes/:id/items', async (req, res) => {
     }
 });
 
+app.delete('/items/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Delete the item
+        const item = await Item.findByIdAndDelete(id);
+        if (!item) {
+            return res.status(404).json({ error: 'Item not found' });
+        }
+
+        // Delete associated item reviews
+        await ItemReview.deleteMany({ itemId: id });
+
+        res.json({ message: 'Item and its reviews deleted' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/items/:id/stats', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const item = await Item.findById(id);
+        if (!item) return res.status(404).json({ error: 'Item not found' });
+
+        const stats = await ItemReview.aggregate([
+            { $match: { itemId: item._id } },
+            { $group: { _id: null, avgRating: { $avg: "$rating" }, totalRatings: { $sum: 1 } } }
+        ]);
+
+        const averageRating = stats.length > 0 ? parseFloat(stats[0].avgRating.toFixed(1)) : 0;
+        const totalRatings = stats.length > 0 ? stats[0].totalRatings : 0;
+
+        const reviews = await ItemReview.find({ itemId: id }).sort({ timestamp: -1 }).limit(10);
+
+        res.json({
+            item,
+            averageRating,
+            totalRatings,
+            reviews
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.delete('/cafes/:id', async (req, res) => {
     try {
         const { id } = req.params;

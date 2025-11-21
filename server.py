@@ -112,6 +112,57 @@ def add_item(cafe_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/items/<item_id>', methods=['DELETE'])
+def delete_item(item_id):
+    try:
+        # Delete the item
+        result = items_collection.delete_one({'_id': ObjectId(item_id)})
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Item not found'}), 404
+        
+        # Delete associated item reviews
+        item_reviews_collection.delete_many({'itemId': ObjectId(item_id)})
+        
+        return jsonify({'message': 'Item and its reviews deleted'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/items/<item_id>/stats', methods=['GET'])
+def get_item_stats(item_id):
+    try:
+        item = items_collection.find_one({'_id': ObjectId(item_id)})
+        if not item:
+            return jsonify({'error': 'Item not found'}), 404
+
+        # Calculate average rating for this item
+        pipeline = [
+            {'$match': {'itemId': ObjectId(item_id)}},
+            {'$group': {'_id': None, 'avgRating': {'$avg': '$rating'}, 'totalRatings': {'$sum': 1}}}
+        ]
+        avg_result = list(item_reviews_collection.aggregate(pipeline))
+        
+        average_rating = 0.0
+        total_ratings = 0
+        if avg_result and len(avg_result) > 0:
+            average_rating = round(avg_result[0]['avgRating'], 1)
+            total_ratings = avg_result[0]['totalRatings']
+
+        # Get recent reviews for this item
+        recent_reviews_cursor = item_reviews_collection.find({'itemId': ObjectId(item_id)})\
+            .sort('timestamp', -1)\
+            .limit(10)
+        
+        recent_reviews = [serialize_doc(doc) for doc in recent_reviews_cursor]
+
+        return jsonify({
+            'item': serialize_doc(item),
+            'averageRating': average_rating,
+            'totalRatings': total_ratings,
+            'reviews': recent_reviews
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/cafes/<cafe_id>', methods=['DELETE'])
 def delete_cafe(cafe_id):
     try:
