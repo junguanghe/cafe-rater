@@ -78,15 +78,24 @@
             <div style="display: flex; justify-content: space-around; text-align: center;">
                 <div>
                     <h2 id="totalRatings">0</h2>
-                    <p>Total Ratings</p>
+                    <p>Total Cafe Ratings</p>
                 </div>
                 <div>
                     <h2 id="averageRating">0.0</h2>
-                    <p>Average Rating</p>
+                    <p>Average Cafe Rating</p>
                 </div>
             </div>
+
+            <!-- Items Section -->
             <div style="margin-top: 20px;">
-                <h4>🕒 Recent Ratings</h4>
+                <h4>🍽️ Menu Items</h4>
+                <div id="itemsStats" style="padding: 0;">
+                    <p style="color: #777;">No items yet.</p>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <h4>🕒 Recent Cafe Ratings</h4>
                 <ul id="recentRatings" style="list-style: none; padding: 0;">
                     <li>Loading...</li>
                 </ul>
@@ -275,6 +284,30 @@
 
             document.getElementById('totalRatings').innerText = stats.totalRatings;
             document.getElementById('averageRating').innerText = stats.averageRating;
+
+            // Display items with their ratings
+            const itemsDiv = document.getElementById('itemsStats');
+            if (!stats.items || stats.items.length === 0) {
+                itemsDiv.innerHTML = '<p style="color: #777;">No items yet.</p>';
+            } else {
+                itemsDiv.innerHTML = stats.items.map(item => `
+                    <div style="padding: 10px; margin: 5px 0; background: #f8f9fa; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>${item.name}</strong>
+                            <span class="badge" style="margin-left: 5px;">${item.type}</span>
+                            <span style="color: #34a853; margin-left: 10px;">$${(item.price || 0).toFixed(2)}</span>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 1.2em; font-weight: bold; color: #1a73e8;">
+                                ${item.averageRating}⭐
+                            </div>
+                            <div style="font-size: 0.8em; color: #666;">
+                                ${item.totalRatings} rating${item.totalRatings !== 1 ? 's' : ''}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
 
             const recentList = document.getElementById('recentRatings');
             if (stats.recentRatings.length === 0) {

@@ -175,7 +175,7 @@ def get_cafe_stats(cafe_id):
         # Count total ratings for this cafe (not items)
         total_ratings = cafe_reviews_collection.count_documents({'cafeId': ObjectId(cafe_id)})
 
-        # Calculate average rating
+        # Calculate average rating for cafe
         pipeline = [
             {'$match': {'cafeId': ObjectId(cafe_id)}},
             {'$group': {'_id': None, 'avgRating': {'$avg': '$rating'}}}
@@ -183,7 +183,7 @@ def get_cafe_stats(cafe_id):
         avg_result = list(cafe_reviews_collection.aggregate(pipeline))
         average_rating = round(avg_result[0]['avgRating'], 1) if avg_result and len(avg_result) > 0 else 0.0
 
-        # Get recent ratings
+        # Get recent cafe ratings
         recent_ratings_cursor = cafe_reviews_collection.find({'cafeId': ObjectId(cafe_id)})\
             .sort('timestamp', -1)\
             .limit(5)
@@ -196,11 +196,36 @@ def get_cafe_stats(cafe_id):
             r_serialized['cafeId'] = {'name': cafe['name'], '_id': str(cafe['_id'])}
             recent_ratings.append(r_serialized)
 
+        # Get items for this cafe with their average ratings
+        items = list(items_collection.find({'cafeId': ObjectId(cafe_id)}))
+        items_with_ratings = []
+        
+        for item in items:
+            item_id = item['_id']
+            
+            # Calculate average rating for this item
+            item_pipeline = [
+                {'$match': {'itemId': item_id}},
+                {'$group': {'_id': None, 'avgRating': {'$avg': '$rating'}, 'totalRatings': {'$sum': 1}}}
+            ]
+            item_avg_result = list(item_reviews_collection.aggregate(item_pipeline))
+            
+            item_data = serialize_doc(item)
+            if item_avg_result and len(item_avg_result) > 0:
+                item_data['averageRating'] = round(item_avg_result[0]['avgRating'], 1)
+                item_data['totalRatings'] = item_avg_result[0]['totalRatings']
+            else:
+                item_data['averageRating'] = 0.0
+                item_data['totalRatings'] = 0
+            
+            items_with_ratings.append(item_data)
+
         return jsonify({
             'cafeName': cafe['name'],
             'totalRatings': total_ratings,
             'averageRating': average_rating,
-            'recentRatings': recent_ratings
+            'recentRatings': recent_ratings,
+            'items': items_with_ratings  # New: items with their ratings
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

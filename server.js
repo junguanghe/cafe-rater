@@ -158,11 +158,27 @@ app.get('/cafes/:id/stats', async (req, res) => {
             .limit(5)
             .populate('cafeId', 'name');
 
+        // Get items for this cafe with their average ratings
+        const items = await Item.find({ cafeId: id });
+        const itemsWithRatings = await Promise.all(items.map(async (item) => {
+            const itemAvgResult = await ItemReview.aggregate([
+                { $match: { itemId: item._id } },
+                { $group: { _id: null, avgRating: { $avg: "$rating" }, totalRatings: { $sum: 1 } } }
+            ]);
+
+            return {
+                ...item.toObject(),
+                averageRating: itemAvgResult.length > 0 ? itemAvgResult[0].avgRating.toFixed(1) : 0,
+                totalRatings: itemAvgResult.length > 0 ? itemAvgResult[0].totalRatings : 0
+            };
+        }));
+
         res.json({
             cafeName: cafe.name,
             totalRatings,
             averageRating,
-            recentRatings
+            recentRatings,
+            items: itemsWithRatings  // New: items with their ratings
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
