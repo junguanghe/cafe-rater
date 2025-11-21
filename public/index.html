@@ -153,7 +153,7 @@
                                         </div>
                                     </div>
                                     <div style="display: flex; gap: 5px;">
-                                        <input type="number" id="rating-item-${item._id}" placeholder="1-5" style="width: 50px; padding: 5px;">
+                                        <input type="number" id="rating-item-${item._id}" placeholder="1-5" min="1" max="5" onkeydown="return false" style="width: 50px; padding: 5px;">
                                         <input type="text" id="comment-item-${item._id}" placeholder="Comment..." style="width: 150px; padding: 5px;">
                                         <button onclick="rateItem('${cafe._id}', '${item._id}')" style="width: auto; padding: 5px 10px; font-size: 0.8em;">Rate Item</button>
                                     </div>
@@ -180,7 +180,7 @@
                     <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
                         <strong>Rate this Cafe:</strong>
                         <div style="margin-top: 5px;">
-                            <input type="number" id="rating-${cafe._id}" placeholder="1-5" style="width: 60px;">
+                            <input type="number" id="rating-${cafe._id}" placeholder="1-5" min="1" max="5" onkeydown="return false" style="width: 60px;">
                             <input type="text" id="comment-${cafe._id}" placeholder="Comment (max 200 chars)" maxlength="200" style="width: 200px;">
                             <button onclick="rateCafe('${cafe._id}')" style="width: auto; padding: 5px 10px;">Rate Cafe</button>
                         </div>
@@ -256,7 +256,7 @@
         async function rateItem(cafeId, itemId) {
             const ratingInput = document.getElementById(`rating-item-${itemId}`);
             const commentInput = document.getElementById(`comment-item-${itemId}`);
-            const rating = ratingInput.value;
+            const rating = parseInt(ratingInput.value);
             const comment = commentInput.value;
 
             if (!rating) {
@@ -264,10 +264,15 @@
                 return;
             }
 
+            if (rating < 1 || rating > 5) {
+                alert('Rating must be between 1 and 5');
+                return;
+            }
+
             await fetch(`${API_URL}/reviews`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cafeId, itemId, rating: parseInt(rating), comment })
+                body: JSON.stringify({ cafeId, itemId, rating, comment })
             });
             alert('Item Rating Saved!');
 
@@ -325,13 +330,23 @@
         }
 
         async function rateCafe(id) {
-            const rating = document.getElementById(`rating-${id}`).value;
+            const rating = parseInt(document.getElementById(`rating-${id}`).value);
             const comment = document.getElementById(`comment-${id}`).value;
+
+            if (!rating) {
+                alert('Please enter a rating');
+                return;
+            }
+
+            if (rating < 1 || rating > 5) {
+                alert('Rating must be between 1 and 5');
+                return;
+            }
 
             await fetch(`${API_URL}/reviews`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cafeId: id, rating: parseInt(rating), comment })
+                body: JSON.stringify({ cafeId: id, rating, comment })
             });
             alert('Rating Saved!');
             // Refresh stats if we are currently viewing this cafe
