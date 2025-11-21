@@ -18,6 +18,7 @@ try:
     # Get the default database from the URI
     db = client.get_database() 
     cafes_collection = db.caves # Mongoose pluralized 'Cafe' to 'caves'
+    items_collection = db.items # New separate collection for items
     reviews_collection = db.reviews
     print("✅ Connected to Firestore via MongoDB API!")
 except Exception as e:
@@ -54,6 +55,10 @@ def serve_index():
 def get_cafes():
     try:
         cafes = list(cafes_collection.find())
+        # Populate items for each cafe
+        for cafe in cafes:
+            cafe_items = list(items_collection.find({'cafeId': cafe['_id']}))
+            cafe['items'] = [serialize_doc(item) for item in cafe_items]
         return jsonify([serialize_doc(cafe) for cafe in cafes])
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -72,8 +77,7 @@ def create_cafe():
 
         new_cafe = {
             'name': data['name'],
-            'building': data['building'],
-            'items': [] # Initialize empty items array
+            'building': data['building']
         }
         result = cafes_collection.insert_one(new_cafe)
         new_cafe['_id'] = result.inserted_id
@@ -88,25 +92,22 @@ def add_item(cafe_id):
         if not data.get('name'):
             return jsonify({'error': 'Item name is required'}), 400
 
-        # Create new item with its own ObjectId
-        new_item = {
-            '_id': ObjectId(),
-            'name': data['name'],
-            'price': data.get('price', 0.0),  # Default to 0.0 if not provided
-            'type': data.get('type', 'other')  # Default to 'other' if not provided
-        }
-
-        result = cafes_collection.update_one(
-            {'_id': ObjectId(cafe_id)},
-            {'$push': {'items': new_item}}
-        )
-
-        if result.matched_count == 0:
+        # Verify cafe exists
+        cafe = cafes_collection.find_one({'_id': ObjectId(cafe_id)})
+        if not cafe:
             return jsonify({'error': 'Cafe not found'}), 404
 
-        # Return the updated cafe
-        updated_cafe = cafes_collection.find_one({'_id': ObjectId(cafe_id)})
-        return jsonify(serialize_doc(updated_cafe)), 201
+        # Create new item as separate document
+        new_item = {
+            'cafeId': ObjectId(cafe_id),
+            'name': data['name'],
+            'price': data.get('price', 0.0),
+            'type': data.get('type', 'other')
+        }
+
+        result = items_collection.insert_one(new_item)
+        new_item['_id'] = result.inserted_id
+        return jsonify(serialize_doc(new_item)), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -115,9 +116,11 @@ def delete_cafe(cafe_id):
     try:
         # Delete cafe
         cafes_collection.delete_one({'_id': ObjectId(cafe_id)})
+        # Delete associated items
+        items_collection.delete_many({'cafeId': ObjectId(cafe_id)})
         # Delete associated reviews
         reviews_collection.delete_many({'cafeId': ObjectId(cafe_id)})
-        return jsonify({'message': 'Cafe and associated reviews deleted'})
+        return jsonify({'message': 'Cafe, items, and reviews deleted'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

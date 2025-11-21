@@ -26,12 +26,14 @@ const connectDB = async () => {
 // --- 2. Schemas ---
 const CafeSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
-    building: { type: String, required: true },
-    items: [{
-        name: { type: String, required: true },
-        price: { type: Number, default: 0.0 },
-        type: { type: String, default: 'other' }
-    }]
+    building: { type: String, required: true }
+});
+
+const ItemSchema = new mongoose.Schema({
+    cafeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Cafe', required: true },
+    name: { type: String, required: true },
+    price: { type: Number, default: 0.0 },
+    type: { type: String, default: 'other' }
 });
 
 const ReviewSchema = new mongoose.Schema({
@@ -43,13 +45,19 @@ const ReviewSchema = new mongoose.Schema({
 });
 
 const Cafe = mongoose.model('Cafe', CafeSchema);
+const Item = mongoose.model('Item', ItemSchema);
 const Review = mongoose.model('Review', ReviewSchema);
 
 // --- 3. API Routes ---
 app.get('/cafes', async (req, res) => {
     try {
         const cafes = await Cafe.find();
-        res.json(cafes);
+        // Populate items for each cafe
+        const cafesWithItems = await Promise.all(cafes.map(async (cafe) => {
+            const items = await Item.find({ cafeId: cafe._id });
+            return { ...cafe.toObject(), items };
+        }));
+        res.json(cafesWithItems);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -78,13 +86,14 @@ app.post('/cafes/:id/items', async (req, res) => {
         const cafe = await Cafe.findById(id);
         if (!cafe) return res.status(404).json({ error: 'Cafe not found' });
 
-        cafe.items.push({
+        const newItem = new Item({
+            cafeId: id,
             name,
             price: price || 0.0,
             type: type || 'other'
         });
-        await cafe.save();
-        res.status(201).json(cafe);
+        const savedItem = await newItem.save();
+        res.status(201).json(savedItem);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -94,8 +103,9 @@ app.delete('/cafes/:id', async (req, res) => {
     try {
         const { id } = req.params;
         await Cafe.findByIdAndDelete(id);
+        await Item.deleteMany({ cafeId: id });
         await Review.deleteMany({ cafeId: id });
-        res.json({ message: 'Cafe and associated reviews deleted' });
+        res.json({ message: 'Cafe, items, and reviews deleted' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
