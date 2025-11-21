@@ -51,10 +51,10 @@ const ItemReviewSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 
-const Cafe = mongoose.model('Cafe', CafeSchema);
-const Item = mongoose.model('Item', ItemSchema);
-const CafeReview = mongoose.model('CafeReview', CafeReviewSchema);
-const ItemReview = mongoose.model('ItemReview', ItemReviewSchema);
+const Cafe = mongoose.model('Cafe', CafeSchema, 'cafes');
+const Item = mongoose.model('Item', ItemSchema, 'items');
+const CafeReview = mongoose.model('CafeReview', CafeReviewSchema, 'cafe_reviews');
+const ItemReview = mongoose.model('ItemReview', ItemReviewSchema, 'item_reviews');
 
 // --- 3. API Routes ---
 app.get('/cafes', async (req, res) => {

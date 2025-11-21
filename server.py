@@ -17,7 +17,7 @@ try:
     client = MongoClient(os.getenv('MONGO_URI'))
     # Get the default database from the URI
     db = client.get_database() 
-    cafes_collection = db.caves # Mongoose pluralized 'Cafe' to 'caves'
+    cafes_collection = db.cafes # Correct pluralization
     items_collection = db.items # Separate collection for items
     cafe_reviews_collection = db.cafe_reviews # Reviews for cafes
     item_reviews_collection = db.item_reviews # Reviews for items
