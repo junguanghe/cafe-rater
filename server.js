@@ -27,13 +27,14 @@ const connectDB = async () => {
 const CafeSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
     building: { type: String, required: true },
-    cuisine: [String],
-    isOpen: { type: Boolean, default: true },
-    highTraffic: { type: Boolean, default: false }
+    items: [{
+        name: { type: String, required: true }
+    }]
 });
 
 const ReviewSchema = new mongoose.Schema({
     cafeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Cafe', required: true },
+    itemId: { type: mongoose.Schema.Types.ObjectId }, // Optional: if reviewing a specific item
     rating: { type: Number, min: 1, max: 5, required: true },
     comment: { type: String, maxlength: 200 },
     timestamp: { type: Date, default: Date.now }
@@ -63,6 +64,23 @@ app.post('/cafes', async (req, res) => {
         } else {
             res.status(400).json({ error: err.message });
         }
+    }
+});
+
+app.post('/cafes/:id/items', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name } = req.body;
+        if (!name) return res.status(400).json({ error: 'Item name is required' });
+
+        const cafe = await Cafe.findById(id);
+        if (!cafe) return res.status(404).json({ error: 'Cafe not found' });
+
+        cafe.items.push({ name });
+        await cafe.save();
+        res.status(201).json(cafe);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 

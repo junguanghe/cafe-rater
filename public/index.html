@@ -99,7 +99,6 @@
         <h3>Add a New Cafe</h3>
         <input type="text" id="cafeName" placeholder="Cafe Name (e.g. Charlie's)">
         <input type="text" id="building" placeholder="Building (e.g. 43)">
-        <input type="text" id="cuisine" placeholder="Cuisine (e.g. Sushi, Pizza)">
         <button onclick="addCafe()">Add Cafe</button>
     </div>
 
@@ -122,16 +121,42 @@
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <strong>${cafe.name}</strong> (Bldg ${cafe.building})
-                            <br>
-                            <span class="badge">${cafe.cuisine.join(', ')}</span>
                         </div>
-                        <button onclick="viewCafeStats('${cafe._id}')" style="background: #34a853; width: auto; padding: 5px 10px; font-size: 0.8em; margin-right: 5px;">View Stats</button>
-                        <button onclick="deleteCafe('${cafe._id}')" style="background: #dc3545; width: auto; padding: 5px 10px; font-size: 0.8em;">Delete</button>
+                        <div>
+                            <button onclick="viewCafeStats('${cafe._id}')" style="background: #34a853; width: auto; padding: 5px 10px; font-size: 0.8em; margin-right: 5px;">View Stats</button>
+                            <button onclick="deleteCafe('${cafe._id}')" style="background: #dc3545; width: auto; padding: 5px 10px; font-size: 0.8em;">Delete</button>
+                        </div>
                     </div>
-                    <div style="margin-top: 10px;">
-                        <input type="number" id="rating-${cafe._id}" placeholder="1-5" style="width: 60px;">
-                        <input type="text" id="comment-${cafe._id}" placeholder="Comment (max 200 chars)" maxlength="200" style="width: 200px;">
-                        <button onclick="rateCafe('${cafe._id}')" style="width: auto; padding: 5px 10px;">Rate</button>
+                    
+                    <!-- Items Section -->
+                    <div style="margin-top: 15px; padding-left: 15px; border-left: 3px solid #e8f0fe;">
+                        <h4>Menu Items</h4>
+                        <ul style="list-style: none; padding: 0;">
+                            ${cafe.items && cafe.items.length > 0 ? cafe.items.map(item => `
+                                <li style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #eee;">
+                                    <div style="font-weight: bold; margin-bottom: 5px;">${item.name}</div>
+                                    <div style="display: flex; gap: 5px;">
+                                        <input type="number" id="rating-item-${item._id}" placeholder="1-5" style="width: 50px; padding: 5px;">
+                                        <input type="text" id="comment-item-${item._id}" placeholder="Comment..." style="width: 150px; padding: 5px;">
+                                        <button onclick="rateItem('${cafe._id}', '${item._id}')" style="width: auto; padding: 5px 10px; font-size: 0.8em;">Rate Item</button>
+                                    </div>
+                                </li>
+                            `).join('') : '<li style="color: #777;">No items yet.</li>'}
+                        </ul>
+                        <div style="display: flex; gap: 5px; margin-top: 10px;">
+                            <input type="text" id="newItem-${cafe._id}" placeholder="New Item Name" style="width: 200px;">
+                            <button onclick="addItem('${cafe._id}')" style="width: auto; padding: 5px 10px;">Add Item</button>
+                        </div>
+                    </div>
+
+                    <!-- Rate Cafe Section -->
+                    <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
+                        <strong>Rate this Cafe:</strong>
+                        <div style="margin-top: 5px;">
+                            <input type="number" id="rating-${cafe._id}" placeholder="1-5" style="width: 60px;">
+                            <input type="text" id="comment-${cafe._id}" placeholder="Comment (max 200 chars)" maxlength="200" style="width: 200px;">
+                            <button onclick="rateCafe('${cafe._id}')" style="width: auto; padding: 5px 10px;">Rate Cafe</button>
+                        </div>
                     </div>
                 </div>
             `).join('');
@@ -155,24 +180,64 @@
         async function addCafe() {
             const name = document.getElementById('cafeName').value;
             const building = document.getElementById('building').value;
-            const cuisine = document.getElementById('cuisine').value.split(',');
 
             const response = await fetch(`${API_URL}/cafes`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, building, cuisine })
+                body: JSON.stringify({ name, building })
             });
 
             if (response.ok) {
                 // Clear inputs and reload list
                 document.getElementById('cafeName').value = '';
                 document.getElementById('building').value = '';
-                document.getElementById('cuisine').value = '';
                 loadCafes();
             } else {
                 const errorData = await response.json();
                 alert(`Error: ${errorData.error}`);
             }
+        }
+
+        async function addItem(cafeId) {
+            const nameInput = document.getElementById(`newItem-${cafeId}`);
+            const name = nameInput.value;
+            if (!name) return;
+
+            const response = await fetch(`${API_URL}/cafes/${cafeId}/items`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+
+            if (response.ok) {
+                nameInput.value = '';
+                loadCafes();
+            } else {
+                const errorData = await response.json();
+                alert(`Error: ${errorData.error}`);
+            }
+        }
+
+        async function rateItem(cafeId, itemId) {
+            const ratingInput = document.getElementById(`rating-item-${itemId}`);
+            const commentInput = document.getElementById(`comment-item-${itemId}`);
+            const rating = ratingInput.value;
+            const comment = commentInput.value;
+
+            if (!rating) {
+                alert('Please enter a rating');
+                return;
+            }
+
+            await fetch(`${API_URL}/reviews`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cafeId, itemId, rating: parseInt(rating), comment })
+            });
+            alert('Item Rating Saved!');
+
+            ratingInput.value = '';
+            commentInput.value = '';
         }
 
         async function viewCafeStats(id) {
