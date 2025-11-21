@@ -5,66 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Google Cafe Rater</title>
-    <style>
-        body {
-            font-family: 'Google Sans', sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background: #f8f9fa;
-        }
-
-        .card {
-            background: white;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        h1 {
-            color: #1a73e8;
-        }
-
-        input,
-        select,
-        button {
-            padding: 10px;
-            margin: 5px 0;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        button {
-            background: #1a73e8;
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        button:hover {
-            background: #1557b0;
-        }
-
-        .cafe-list {
-            list-style: none;
-            padding: 0;
-        }
-
-        .cafe-item {
-            border-bottom: 1px solid #eee;
-            padding: 15px 0;
-        }
-
-        .badge {
-            background: #e8f0fe;
-            color: #1a73e8;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.8em;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
@@ -72,17 +13,13 @@
     <h1>☕ Google Cafe Rater</h1>
 
     <!-- Cafe Stats Modal -->
-    <div id="cafeStatsModal"
-        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-        <div
-            style="background: white; margin: 5% auto; padding: 20px; width: 90%; max-width: 600px; border-radius: 8px; position: relative; max-height: 90vh; overflow-y: auto;">
-            <button onclick="closeCafeStats()"
-                style="position: absolute; top: 10px; right: 10px; border: none; background: #f44336; color: white; border-radius: 50%; width: 30px; height: 30px; font-size: 1.2em; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
+    <div id="cafeStatsModal" class="modal">
+        <div class="modal-content">
+            <button onclick="closeCafeStats()" class="modal-close-btn">&times;</button>
             <h3 id="cafeStatsTitle" style="margin-top: 0;">Cafe Stats</h3>
             <div id="cafeStatsContent">Loading...</div>
-            <div style="text-align: center; margin-top: 20px;">
-                <button onclick="closeCafeStats()"
-                    style="background: #666; width: auto; padding: 8px 20px;">Close</button>
+            <div class="modal-footer-close">
+                <button onclick="closeCafeStats()" class="btn-secondary">Close</button>
             </div>
         </div>
     </div>
@@ -90,13 +27,13 @@
     <!-- Form to Add a New Cafe -->
     <div class="card">
         <h3>Cafe Ratings Summary</h3>
-        <table style="width: 100%; border-collapse: collapse;">
+        <table class="stats-table">
             <thead>
-                <tr style="background: #f1f3f4; text-align: left;">
-                    <th style="padding: 10px; border-bottom: 1px solid #ddd;">Cafe Name</th>
-                    <th style="padding: 10px; border-bottom: 1px solid #ddd;">Average Rating</th>
-                    <th style="padding: 10px; border-bottom: 1px solid #ddd;"># Reviews</th>
-                    <th style="padding: 10px; border-bottom: 1px solid #ddd;">Actions</th>
+                <tr>
+                    <th>Cafe Name</th>
+                    <th>Average Rating</th>
+                    <th># Reviews</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody id="cafeStatsTableBody">
@@ -114,393 +51,24 @@
 
     <!-- List of Cafes -->
     <!-- Item Stats Modal -->
-    <div id="itemStatsModal"
-        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-        <div
-            style="background: white; margin: 10% auto; padding: 20px; width: 80%; max-width: 500px; border-radius: 8px; position: relative;">
-            <button onclick="closeItemStats()"
-                style="position: absolute; top: 10px; right: 10px; border: none; background: #f44336; color: white; border-radius: 50%; width: 30px; height: 30px; font-size: 1.2em; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
+    <div id="itemStatsModal" class="modal">
+        <div class="modal-content">
+            <button onclick="closeItemStats()" class="modal-close-btn">&times;</button>
             <h3 id="itemStatsTitle" style="margin-top: 0;">Item Stats</h3>
             <div id="itemStatsContent">Loading...</div>
-            <div style="text-align: center; margin-top: 20px;">
-                <button onclick="closeItemStats()"
-                    style="background: #666; width: auto; padding: 8px 20px;">Close</button>
+            <div class="modal-footer-close">
+                <button onclick="closeItemStats()" class="btn-secondary">Close</button>
             </div>
         </div>
     </div>
-
-
 
     <div class="card">
         <h3>All Cafes</h3>
         <div id="cafeList">Loading...</div>
     </div>
 
-    <!-- Simple Script to talk to your Backend -->
-    <script>
-        const API_URL = 'http://localhost:3000';
-
-        async function loadCafes() {
-            const response = await fetch(`${API_URL}/cafes`);
-            const cafes = await response.json();
-
-            // Populate Summary Table
-            const tableBody = document.getElementById('cafeStatsTableBody');
-            if (tableBody) {
-                tableBody.innerHTML = cafes.map(cafe => `
-                    <tr>
-                        <td style="padding: 10px; border-bottom: 1px solid #eee;">${cafe.name}</td>
-                        <td style="padding: 10px; border-bottom: 1px solid #eee;">
-                            <span style="color: #fbbc04; font-weight: bold;">${cafe.averageRating}⭐</span>
-                        </td>
-                        <td style="padding: 10px; border-bottom: 1px solid #eee;">${cafe.totalRatings}</td>
-                        <td style="padding: 10px; border-bottom: 1px solid #eee;">
-                            <button onclick="viewCafeStats('${cafe._id}')" style="background: #34a853; width: auto; padding: 5px 10px; font-size: 0.8em;">Stats</button>
-                        </td>
-                    </tr>
-                `).join('');
-            }
-
-            const list = document.getElementById('cafeList');
-            list.innerHTML = cafes.map(cafe => `
-                <div class="cafe-item">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <strong>${cafe.name}</strong> (Bldg ${cafe.building})
-                        </div>
-                        <div>
-                            <button onclick="deleteCafe('${cafe._id}')" style="background: #dc3545; width: auto; padding: 5px 10px; font-size: 0.8em;">Delete</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Items Section -->
-                    <div style="margin-top: 15px; padding-left: 15px; border-left: 3px solid #e8f0fe;">
-                        <h4>Menu Items</h4>
-                        <ul style="list-style: none; padding: 0;">
-                            ${cafe.items && cafe.items.length > 0 ? cafe.items.map(item => `
-                                <li style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #eee;">
-                                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 5px;">
-                                        <div>
-                                            <div style="font-weight: bold;">${item.name}</div>
-                                            <div style="font-size: 0.85em; color: #666;">
-                                                <span class="badge" style="margin-right: 5px;">${item.type || 'other'}</span>
-                                                <span style="color: #34a853; font-weight: bold;">$${(item.price || 0).toFixed(2)}</span>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <button onclick="deleteItem('${cafe._id}', '${item._id}')" style="background: #dc3545; color: white; border: none; padding: 3px 8px; border-radius: 3px; cursor: pointer; font-size: 0.75em;">Delete</button>
-                                        </div>
-                                    </div>
-                                    <div style="display: flex; gap: 5px;">
-                                        <input type="number" id="rating-item-${item._id}" placeholder="1-5" min="1" max="5" onkeydown="return false" style="width: 50px; padding: 5px;">
-                                        <input type="text" id="comment-item-${item._id}" placeholder="Comment..." style="width: 150px; padding: 5px;">
-                                        <button onclick="rateItem('${cafe._id}', '${item._id}')" style="width: auto; padding: 5px 10px; font-size: 0.8em;">Rate Item</button>
-                                    </div>
-                                </li>
-                            `).join('') : '<li style="color: #777;">No items yet.</li>'}
-                        </ul>
-                        <div style="margin-top: 10px;">
-                            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
-                                <input type="text" id="newItem-${cafe._id}" placeholder="Item Name" style="width: 150px;">
-                                <input type="number" id="newItemPrice-${cafe._id}" placeholder="Price" step="0.01" style="width: 80px;">
-                                <select id="newItemType-${cafe._id}" style="width: 100px;">
-                                    <option value="entree">Entree</option>
-                                    <option value="drink">Drink</option>
-                                    <option value="side">Side</option>
-                                    <option value="dessert">Dessert</option>
-                                    <option value="other">Other</option>
-                                </select>
-                                <button onclick="addItem('${cafe._id}')" style="width: auto; padding: 5px 10px;">Add Item</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Rate Cafe Section -->
-                    <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
-                        <strong>Rate this Cafe:</strong>
-                        <div style="margin-top: 5px;">
-                            <input type="number" id="rating-${cafe._id}" placeholder="1-5" min="1" max="5" onkeydown="return false" style="width: 60px;">
-                            <input type="text" id="comment-${cafe._id}" placeholder="Comment (max 200 chars)" maxlength="200" style="width: 200px;">
-                            <button onclick="rateCafe('${cafe._id}')" style="width: auto; padding: 5px 10px;">Rate Cafe</button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        async function deleteCafe(id) {
-            if (!confirm('Are you sure you want to delete this cafe? This will also delete all its items and reviews.')) {
-                return;
-            }
-
-            await fetch(`${API_URL}/cafes/${id}`, {
-                method: 'DELETE'
-            });
-
-            loadCafes();
-            // Close modal if open
-            closeCafeStats();
-        }
-
-        async function addCafe() {
-            const name = document.getElementById('cafeName').value;
-            const building = document.getElementById('building').value;
-
-            const response = await fetch(`${API_URL}/cafes`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, building })
-            });
-
-            if (response.ok) {
-                // Clear inputs and reload list
-                document.getElementById('cafeName').value = '';
-                document.getElementById('building').value = '';
-                loadCafes();
-            } else {
-                const errorData = await response.json();
-                alert(`Error: ${errorData.error}`);
-            }
-        }
-
-        async function addItem(cafeId) {
-            const nameInput = document.getElementById(`newItem-${cafeId}`);
-            const priceInput = document.getElementById(`newItemPrice-${cafeId}`);
-            const typeInput = document.getElementById(`newItemType-${cafeId}`);
-
-            const name = nameInput.value;
-            const price = parseFloat(priceInput.value) || 0.0;
-            const type = typeInput.value;
-
-            if (!name) return;
-
-            const response = await fetch(`${API_URL}/cafes/${cafeId}/items`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, price, type })
-            });
-
-            if (response.ok) {
-                nameInput.value = '';
-                priceInput.value = '';
-                typeInput.value = 'entree';
-                loadCafes();
-            } else {
-                const errorData = await response.json();
-                alert(`Error: ${errorData.error}`);
-            }
-        }
-
-        async function rateItem(cafeId, itemId) {
-            const ratingInput = document.getElementById(`rating-item-${itemId}`);
-            const commentInput = document.getElementById(`comment-item-${itemId}`);
-            const rating = parseInt(ratingInput.value);
-            const comment = commentInput.value;
-
-            if (!rating) {
-                alert('Please enter a rating');
-                return;
-            }
-
-            if (rating < 1 || rating > 5) {
-                alert('Rating must be between 1 and 5');
-                return;
-            }
-
-            await fetch(`${API_URL}/reviews`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cafeId, itemId, rating, comment })
-            });
-            alert('Item Rating Saved!');
-
-            ratingInput.value = '';
-            commentInput.value = '';
-        }
-
-        async function deleteItem(cafeId, itemId) {
-            if (!confirm('Are you sure you want to delete this item? This will also delete all its reviews.')) {
-                return;
-            }
-
-            const response = await fetch(`${API_URL}/items/${itemId}`, {
-                method: 'DELETE'
-            });
-
-            if (response.ok) {
-                loadCafes();
-            } else {
-                const errorData = await response.json();
-                alert(`Error: ${errorData.error}`);
-            }
-        }
-
-        async function viewItemStats(itemId) {
-            document.getElementById('itemStatsModal').style.display = 'block';
-            document.getElementById('itemStatsContent').innerHTML = 'Loading...';
-
-            try {
-                const response = await fetch(`${API_URL}/items/${itemId}/stats`);
-                const stats = await response.json();
-
-                document.getElementById('itemStatsTitle').innerText = `📊 Stats for ${stats.item.name}`;
-
-                let reviewsHtml = '';
-                if (stats.reviews.length === 0) {
-                    reviewsHtml = '<p style="color: #777;">No reviews yet.</p>';
-                } else {
-                    reviewsHtml = '<ul style="list-style: none; padding: 0;">' +
-                        stats.reviews.map(r => `
-                            <li style="padding: 10px 0; border-bottom: 1px solid #eee;">
-                                <div style="display: flex; justify-content: space-between;">
-                                    <span style="color: #fbbc04; font-weight: bold;">${r.rating}⭐</span>
-                                    <span style="color: #666; font-size: 0.8em;">${new Date(r.timestamp).toLocaleDateString()}</span>
-                                </div>
-                                <div style="font-style: italic; color: #555; margin-top: 5px;">"${r.comment || ''}"</div>
-                            </li>
-                        `).join('') +
-                        '</ul>';
-                }
-
-                document.getElementById('itemStatsContent').innerHTML = `
-                    <div style="text-align: center; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                        <div style="font-size: 2.5em; font-weight: bold; color: #1a73e8;">${stats.averageRating}</div>
-                        <div style="color: #666;">Average Rating</div>
-                        <div style="font-size: 0.9em; color: #888;">(${stats.totalRatings} total ratings)</div>
-                        <div style="margin-top: 10px;">
-                            <span class="badge">${stats.item.type}</span>
-                            <span style="color: #34a853; font-weight: bold; margin-left: 10px;">$${(stats.item.price || 0).toFixed(2)}</span>
-                        </div>
-                    </div>
-                    <h4>Recent Reviews</h4>
-                    ${reviewsHtml}
-                `;
-            } catch (err) {
-                document.getElementById('itemStatsContent').innerHTML = `<p style="color: red;">Error loading stats: ${err.message}</p>`;
-            }
-        }
-
-        function closeItemStats() {
-            document.getElementById('itemStatsModal').style.display = 'none';
-        }
-
-        function closeCafeStats() {
-            document.getElementById('cafeStatsModal').style.display = 'none';
-        }
-
-        async function viewCafeStats(id) {
-            document.getElementById('cafeStatsModal').style.display = 'block';
-            document.getElementById('cafeStatsContent').innerHTML = 'Loading...';
-
-            try {
-                const response = await fetch(`${API_URL}/cafes/${id}/stats`);
-                const stats = await response.json();
-
-                document.getElementById('cafeStatsTitle').innerText = `📊 Stats for ${stats.cafeName}`;
-
-                // Items HTML
-                let itemsHtml = '';
-                if (!stats.items || stats.items.length === 0) {
-                    itemsHtml = '<p style="color: #777;">No items yet.</p>';
-                } else {
-                    itemsHtml = stats.items.map(item => `
-                        <div style="padding: 10px; margin: 5px 0; background: #f8f9fa; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <strong>${item.name}</strong>
-                                <span class="badge" style="margin-left: 5px;">${item.type}</span>
-                                <span style="color: #34a853; margin-left: 10px;">$${(item.price || 0).toFixed(2)}</span>
-                            </div>
-                            <div style="text-align: right;">
-                                <div style="font-size: 1.2em; font-weight: bold; color: #1a73e8;">
-                                    ${item.averageRating}⭐
-                                </div>
-                                <div style="font-size: 0.8em; color: #666;">
-                                    ${item.totalRatings} rating${item.totalRatings !== 1 ? 's' : ''}
-                                </div>
-                                <button onclick="viewItemStats('${item._id}')" style="background: #34a853; color: white; border: none; padding: 3px 8px; border-radius: 3px; cursor: pointer; font-size: 0.75em; margin-top: 5px;">Stats</button>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-
-                // Recent Ratings HTML
-                let recentHtml = '';
-                if (stats.recentRatings.length === 0) {
-                    recentHtml = '<li>No ratings yet.</li>';
-                } else {
-                    recentHtml = stats.recentRatings.map(r => `
-                        <li style="padding: 5px 0; border-bottom: 1px solid #eee;">
-                            <strong>${r.rating}⭐</strong> - "${r.comment}" 
-                            <span style="color: #888; font-size: 0.8em;">(${new Date(r.timestamp).toLocaleDateString()})</span>
-                        </li>
-                    `).join('');
-                }
-
-                document.getElementById('cafeStatsContent').innerHTML = `
-                    <div style="display: flex; justify-content: space-around; text-align: center; margin-bottom: 20px;">
-                        <div>
-                            <h2 style="margin: 0; color: #1a73e8;">${stats.totalRatings}</h2>
-                            <p style="margin: 5px 0; color: #666;">Total Cafe Ratings</p>
-                        </div>
-                        <div>
-                            <h2 style="margin: 0; color: #1a73e8;">${stats.averageRating}</h2>
-                            <p style="margin: 5px 0; color: #666;">Average Cafe Rating</p>
-                        </div>
-                    </div>
-
-                    <div style="margin-top: 20px;">
-                        <h4>🍽️ Menu Items</h4>
-                        <div style="padding: 0;">
-                            ${itemsHtml}
-                        </div>
-                    </div>
-
-                    <div style="margin-top: 20px;">
-                        <h4>🕒 Recent Cafe Ratings</h4>
-                        <ul style="list-style: none; padding: 0;">
-                            ${recentHtml}
-                        </ul>
-                    </div>
-                `;
-            } catch (err) {
-                document.getElementById('cafeStatsContent').innerHTML = `<p style="color: red;">Error loading stats: ${err.message}</p>`;
-            }
-        }
-
-        async function rateCafe(id) {
-            const rating = parseInt(document.getElementById(`rating-${id}`).value);
-            const comment = document.getElementById(`comment-${id}`).value;
-
-            if (!rating) {
-                alert('Please enter a rating');
-                return;
-            }
-
-            if (rating < 1 || rating > 5) {
-                alert('Rating must be between 1 and 5');
-                return;
-            }
-
-            await fetch(`${API_URL}/reviews`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cafeId: id, rating, comment })
-            });
-            alert('Rating Saved!');
-            // Refresh stats if we are currently viewing this cafe
-            const modal = document.getElementById('cafeStatsModal');
-            if (modal.style.display === 'block') {
-                viewCafeStats(id);
-            }
-
-            // Clear inputs
-            document.getElementById(`rating-${id}`).value = '';
-            document.getElementById(`comment-${id}`).value = '';
-        }
-
-        // Load cafes on startup
-        loadCafes();
-    </script>
+    <!-- Script to talk to your Backend -->
+    <script src="app.js"></script>
 </body>
 
 </html>

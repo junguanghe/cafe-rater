@@ -52,6 +52,10 @@ def serialize_doc(doc):
 def serve_index():
     return send_from_directory('public', 'index.html')
 
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory('public', path)
+
 @app.route('/cafes', methods=['GET'])
 def get_cafes():
     try:
