@@ -36,9 +36,16 @@ const ItemSchema = new mongoose.Schema({
     type: { type: String, default: 'other' }
 });
 
-const ReviewSchema = new mongoose.Schema({
+const CafeReviewSchema = new mongoose.Schema({
     cafeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Cafe', required: true },
-    itemId: { type: mongoose.Schema.Types.ObjectId }, // Optional: if reviewing a specific item
+    rating: { type: Number, min: 1, max: 5, required: true },
+    comment: { type: String, maxlength: 200 },
+    timestamp: { type: Date, default: Date.now }
+});
+
+const ItemReviewSchema = new mongoose.Schema({
+    itemId: { type: mongoose.Schema.Types.ObjectId, ref: 'Item', required: true },
+    cafeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Cafe', required: true }, // For reference
     rating: { type: Number, min: 1, max: 5, required: true },
     comment: { type: String, maxlength: 200 },
     timestamp: { type: Date, default: Date.now }
@@ -46,7 +53,8 @@ const ReviewSchema = new mongoose.Schema({
 
 const Cafe = mongoose.model('Cafe', CafeSchema);
 const Item = mongoose.model('Item', ItemSchema);
-const Review = mongoose.model('Review', ReviewSchema);
+const CafeReview = mongoose.model('CafeReview', CafeReviewSchema);
+const ItemReview = mongoose.model('ItemReview', ItemReviewSchema);
 
 // --- 3. API Routes ---
 app.get('/cafes', async (req, res) => {
@@ -104,7 +112,8 @@ app.delete('/cafes/:id', async (req, res) => {
         const { id } = req.params;
         await Cafe.findByIdAndDelete(id);
         await Item.deleteMany({ cafeId: id });
-        await Review.deleteMany({ cafeId: id });
+        await CafeReview.deleteMany({ cafeId: id });
+        await ItemReview.deleteMany({ cafeId: id });
         res.json({ message: 'Cafe, items, and reviews deleted' });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -113,9 +122,16 @@ app.delete('/cafes/:id', async (req, res) => {
 
 app.post('/reviews', async (req, res) => {
     try {
-        const newReview = new Review(req.body);
-        await newReview.save();
-        res.status(201).json(newReview);
+        // Determine if this is a cafe or item review
+        if (req.body.itemId) {
+            const newReview = new ItemReview(req.body);
+            await newReview.save();
+            res.status(201).json(newReview);
+        } else {
+            const newReview = new CafeReview(req.body);
+            await newReview.save();
+            res.status(201).json(newReview);
+        }
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -129,15 +145,15 @@ app.get('/cafes/:id/stats', async (req, res) => {
             return res.status(404).json({ error: 'Cafe not found' });
         }
 
-        const totalRatings = await Review.countDocuments({ cafeId: id });
+        const totalRatings = await CafeReview.countDocuments({ cafeId: id });
 
-        const avgResult = await Review.aggregate([
+        const avgResult = await CafeReview.aggregate([
             { $match: { cafeId: new mongoose.Types.ObjectId(id) } },
             { $group: { _id: null, avgRating: { $avg: "$rating" } } }
         ]);
         const averageRating = avgResult.length > 0 ? avgResult[0].avgRating.toFixed(1) : 0;
 
-        const recentRatings = await Review.find({ cafeId: id })
+        const recentRatings = await CafeReview.find({ cafeId: id })
             .sort({ timestamp: -1 })
             .limit(5)
             .populate('cafeId', 'name');
@@ -155,14 +171,14 @@ app.get('/cafes/:id/stats', async (req, res) => {
 
 app.get('/stats', async (req, res) => {
     try {
-        const totalRatings = await Review.countDocuments();
+        const totalRatings = await CafeReview.countDocuments();
 
-        const avgResult = await Review.aggregate([
+        const avgResult = await CafeReview.aggregate([
             { $group: { _id: null, avgRating: { $avg: "$rating" } } }
         ]);
         const averageRating = avgResult.length > 0 ? avgResult[0].avgRating.toFixed(1) : 0;
 
-        const recentRatings = await Review.find()
+        const recentRatings = await CafeReview.find()
             .sort({ timestamp: -1 })
             .limit(5)
             .populate('cafeId', 'name');

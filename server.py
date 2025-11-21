@@ -18,8 +18,9 @@ try:
     # Get the default database from the URI
     db = client.get_database() 
     cafes_collection = db.caves # Mongoose pluralized 'Cafe' to 'caves'
-    items_collection = db.items # New separate collection for items
-    reviews_collection = db.reviews
+    items_collection = db.items # Separate collection for items
+    cafe_reviews_collection = db.cafe_reviews # Reviews for cafes
+    item_reviews_collection = db.item_reviews # Reviews for items
     print("✅ Connected to Firestore via MongoDB API!")
 except Exception as e:
     print(f"❌ Connection Failed: {e}")
@@ -118,8 +119,10 @@ def delete_cafe(cafe_id):
         cafes_collection.delete_one({'_id': ObjectId(cafe_id)})
         # Delete associated items
         items_collection.delete_many({'cafeId': ObjectId(cafe_id)})
-        # Delete associated reviews
-        reviews_collection.delete_many({'cafeId': ObjectId(cafe_id)})
+        # Delete associated cafe reviews
+        cafe_reviews_collection.delete_many({'cafeId': ObjectId(cafe_id)})
+        # Delete associated item reviews (items belong to this cafe)
+        item_reviews_collection.delete_many({'cafeId': ObjectId(cafe_id)})
         return jsonify({'message': 'Cafe, items, and reviews deleted'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -136,28 +139,31 @@ def create_review():
         if rating < 1 or rating > 5:
              return jsonify({'error': 'Rating must be between 1 and 5'}), 400
 
-        new_review = {
-            'cafeId': ObjectId(data['cafeId']),
-            'rating': rating,
-            'comment': data.get('comment', ''),
-            'timestamp': datetime.datetime.utcnow()
-        }
-
-        # Optional: Item ID
+        # Determine if this is a cafe review or item review
         if data.get('itemId'):
-            new_review['itemId'] = ObjectId(data['itemId'])
-
-        result = reviews_collection.insert_one(new_review)
-        new_review['_id'] = result.inserted_id
+            # Item review
+            new_review = {
+                'itemId': ObjectId(data['itemId']),
+                'cafeId': ObjectId(data['cafeId']),  # Keep cafeId for reference
+                'rating': rating,
+                'comment': data.get('comment', ''),
+                'timestamp': datetime.datetime.utcnow()
+            }
+            result = item_reviews_collection.insert_one(new_review)
+        else:
+            # Cafe review
+            new_review = {
+                'cafeId': ObjectId(data['cafeId']),
+                'rating': rating,
+                'comment': data.get('comment', ''),
+                'timestamp': datetime.datetime.utcnow()
+            }
+            result = cafe_reviews_collection.insert_one(new_review)
         
-        # Convert ObjectIds to strings for response
-        new_review['cafeId'] = str(new_review['cafeId'])
-        if 'itemId' in new_review:
-            new_review['itemId'] = str(new_review['itemId'])
-            
+        new_review['_id'] = result.inserted_id
         return jsonify(serialize_doc(new_review)), 201
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/cafes/<cafe_id>/stats', methods=['GET'])
 def get_cafe_stats(cafe_id):
@@ -166,19 +172,19 @@ def get_cafe_stats(cafe_id):
         if not cafe:
             return jsonify({'error': 'Cafe not found'}), 404
 
-        # Count total ratings
-        total_ratings = reviews_collection.count_documents({'cafeId': ObjectId(cafe_id)})
+        # Count total ratings for this cafe (not items)
+        total_ratings = cafe_reviews_collection.count_documents({'cafeId': ObjectId(cafe_id)})
 
         # Calculate average rating
         pipeline = [
             {'$match': {'cafeId': ObjectId(cafe_id)}},
             {'$group': {'_id': None, 'avgRating': {'$avg': '$rating'}}}
         ]
-        avg_result = list(reviews_collection.aggregate(pipeline))
+        avg_result = list(cafe_reviews_collection.aggregate(pipeline))
         average_rating = round(avg_result[0]['avgRating'], 1) if avg_result and len(avg_result) > 0 else 0.0
 
         # Get recent ratings
-        recent_ratings_cursor = reviews_collection.find({'cafeId': ObjectId(cafe_id)})\
+        recent_ratings_cursor = cafe_reviews_collection.find({'cafeId': ObjectId(cafe_id)})\
             .sort('timestamp', -1)\
             .limit(5)
         
@@ -202,15 +208,16 @@ def get_cafe_stats(cafe_id):
 @app.route('/stats', methods=['GET'])
 def get_global_stats():
     try:
-        total_ratings = reviews_collection.count_documents({})
+        # Global stats for cafe reviews only (not item reviews)
+        total_ratings = cafe_reviews_collection.count_documents({})
 
         pipeline = [
             {'$group': {'_id': None, 'avgRating': {'$avg': '$rating'}}}
         ]
-        avg_result = list(reviews_collection.aggregate(pipeline))
+        avg_result = list(cafe_reviews_collection.aggregate(pipeline))
         average_rating = round(avg_result[0]['avgRating'], 1) if avg_result and len(avg_result) > 0 else 0.0
 
-        recent_ratings_cursor = reviews_collection.find()\
+        recent_ratings_cursor = cafe_reviews_collection.find()\
             .sort('timestamp', -1)\
             .limit(5)
             
