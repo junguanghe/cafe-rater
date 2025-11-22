@@ -24,16 +24,17 @@ const connectDB = async () => {
 };
 
 // --- 2. Schemas ---
-const CafeSchema = new mongoose.Schema({
-    name: { type: String, required: true, unique: true },
-    building: { type: String, required: true }
-});
-
-const ItemSchema = new mongoose.Schema({
-    cafeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Cafe', required: true },
+// Embedded Item Schema (no cafeId needed since it's embedded)
+const EmbeddedItemSchema = new mongoose.Schema({
     name: { type: String, required: true },
     price: { type: Number, default: 0.0 },
     type: { type: String, default: 'other' }
+});
+
+const CafeSchema = new mongoose.Schema({
+    name: { type: String, required: true, unique: true },
+    building: { type: String, required: true },
+    items: [EmbeddedItemSchema]  // Embedded items array
 });
 
 const CafeReviewSchema = new mongoose.Schema({
@@ -52,7 +53,6 @@ const ItemReviewSchema = new mongoose.Schema({
 });
 
 const Cafe = mongoose.model('Cafe', CafeSchema, 'cafes');
-const Item = mongoose.model('Item', ItemSchema, 'items');
 const CafeReview = mongoose.model('CafeReview', CafeReviewSchema, 'cafe_reviews');
 const ItemReview = mongoose.model('ItemReview', ItemReviewSchema, 'item_reviews');
 
@@ -60,10 +60,8 @@ const ItemReview = mongoose.model('ItemReview', ItemReviewSchema, 'item_reviews'
 app.get('/cafes', async (req, res) => {
     try {
         const cafes = await Cafe.find();
-        // Populate items and stats for each cafe
+        // Calculate stats for each cafe
         const cafesWithData = await Promise.all(cafes.map(async (cafe) => {
-            const items = await Item.find({ cafeId: cafe._id });
-
             // Calculate stats
             const totalRatings = await CafeReview.countDocuments({ cafeId: cafe._id });
             const avgResult = await CafeReview.aggregate([
@@ -74,7 +72,6 @@ app.get('/cafes', async (req, res) => {
 
             return {
                 ...cafe.toObject(),
-                items,
                 totalRatings,
                 averageRating
             };
@@ -108,14 +105,18 @@ app.post('/cafes/:id/items', async (req, res) => {
         const cafe = await Cafe.findById(id);
         if (!cafe) return res.status(404).json({ error: 'Cafe not found' });
 
-        const newItem = new Item({
-            cafeId: id,
+        const newItem = {
             name,
             price: price || 0.0,
             type: type || 'other'
-        });
-        const savedItem = await newItem.save();
-        res.status(201).json(savedItem);
+        };
+
+        cafe.items.push(newItem);
+        await cafe.save();
+
+        // Return the newly added item (it now has an _id)
+        const addedItem = cafe.items[cafe.items.length - 1];
+        res.status(201).json(addedItem);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -125,11 +126,15 @@ app.delete('/items/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Delete the item
-        const item = await Item.findByIdAndDelete(id);
-        if (!item) {
+        // Find the cafe that contains this item
+        const cafe = await Cafe.findOne({ 'items._id': id });
+        if (!cafe) {
             return res.status(404).json({ error: 'Item not found' });
         }
+
+        // Remove the item from the array
+        cafe.items.pull({ _id: id });
+        await cafe.save();
 
         // Delete associated item reviews
         await ItemReview.deleteMany({ itemId: id });
@@ -143,11 +148,17 @@ app.delete('/items/:id', async (req, res) => {
 app.get('/items/:id/stats', async (req, res) => {
     try {
         const { id } = req.params;
-        const item = await Item.findById(id);
+
+        // Find the cafe that contains this item
+        const cafe = await Cafe.findOne({ 'items._id': id });
+        if (!cafe) return res.status(404).json({ error: 'Item not found' });
+
+        // Find the specific item in the array
+        const item = cafe.items.id(id);
         if (!item) return res.status(404).json({ error: 'Item not found' });
 
         const stats = await ItemReview.aggregate([
-            { $match: { itemId: item._id } },
+            { $match: { itemId: new mongoose.Types.ObjectId(id) } },
             { $group: { _id: null, avgRating: { $avg: "$rating" }, totalRatings: { $sum: 1 } } }
         ]);
 
@@ -171,7 +182,6 @@ app.delete('/cafes/:id', async (req, res) => {
     try {
         const { id } = req.params;
         await Cafe.findByIdAndDelete(id);
-        await Item.deleteMany({ cafeId: id });
         await CafeReview.deleteMany({ cafeId: id });
         await ItemReview.deleteMany({ cafeId: id });
         res.json({ message: 'Cafe, items, and reviews deleted' });
@@ -218,9 +228,8 @@ app.get('/cafes/:id/stats', async (req, res) => {
             .limit(5)
             .populate('cafeId', 'name');
 
-        // Get items for this cafe with their average ratings
-        const items = await Item.find({ cafeId: id });
-        const itemsWithRatings = await Promise.all(items.map(async (item) => {
+        // Get items from embedded array with their average ratings
+        const itemsWithRatings = await Promise.all(cafe.items.map(async (item) => {
             const itemAvgResult = await ItemReview.aggregate([
                 { $match: { itemId: item._id } },
                 { $group: { _id: null, avgRating: { $avg: "$rating" }, totalRatings: { $sum: 1 } } }
@@ -238,7 +247,7 @@ app.get('/cafes/:id/stats', async (req, res) => {
             totalRatings,
             averageRating,
             recentRatings,
-            items: itemsWithRatings  // New: items with their ratings
+            items: itemsWithRatings  // Items with their ratings
         });
     } catch (err) {
         res.status(500).json({ error: err.message });

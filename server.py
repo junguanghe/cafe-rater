@@ -60,13 +60,9 @@ def serve_static(path):
 def get_cafes():
     try:
         cafes = list(cafes_collection.find())
-        # Populate items and stats for each cafe
+        # Items are now embedded, just calculate stats for each cafe
         for cafe in cafes:
             cafe_id = cafe['_id']
-            
-            # Items
-            cafe_items = list(items_collection.find({'cafeId': cafe_id}))
-            cafe['items'] = [serialize_doc(item) for item in cafe_items]
             
             # Stats
             total_ratings = cafe_reviews_collection.count_documents({'cafeId': cafe_id})
@@ -119,16 +115,20 @@ def add_item(cafe_id):
         if not cafe:
             return jsonify({'error': 'Cafe not found'}), 404
 
-        # Create new item as separate document
+        # Create new item to embed
         new_item = {
-            'cafeId': ObjectId(cafe_id),
+            '_id': ObjectId(),  # Generate ID for the embedded item
             'name': data['name'],
             'price': data.get('price', 0.0),
             'type': data.get('type', 'other')
         }
 
-        result = items_collection.insert_one(new_item)
-        new_item['_id'] = result.inserted_id
+        # Add item to embedded array
+        cafes_collection.update_one(
+            {'_id': ObjectId(cafe_id)},
+            {'$push': {'items': new_item}}
+        )
+        
         return jsonify(serialize_doc(new_item)), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -136,9 +136,13 @@ def add_item(cafe_id):
 @app.route('/items/<item_id>', methods=['DELETE'])
 def delete_item(item_id):
     try:
-        # Delete the item
-        result = items_collection.delete_one({'_id': ObjectId(item_id)})
-        if result.deleted_count == 0:
+        # Find and remove the item from embedded array
+        result = cafes_collection.update_one(
+            {'items._id': ObjectId(item_id)},
+            {'$pull': {'items': {'_id': ObjectId(item_id)}}}
+        )
+        
+        if result.modified_count == 0:
             return jsonify({'error': 'Item not found'}), 404
         
         # Delete associated item reviews
@@ -151,7 +155,18 @@ def delete_item(item_id):
 @app.route('/items/<item_id>/stats', methods=['GET'])
 def get_item_stats(item_id):
     try:
-        item = items_collection.find_one({'_id': ObjectId(item_id)})
+        # Find the cafe that contains this item
+        cafe = cafes_collection.find_one({'items._id': ObjectId(item_id)})
+        if not cafe:
+            return jsonify({'error': 'Item not found'}), 404
+        
+        # Find the specific item in the embedded array
+        item = None
+        for embedded_item in cafe.get('items', []):
+            if embedded_item['_id'] == ObjectId(item_id):
+                item = embedded_item
+                break
+        
         if not item:
             return jsonify({'error': 'Item not found'}), 404
 
@@ -180,22 +195,21 @@ def get_item_stats(item_id):
             'averageRating': average_rating,
             'totalRatings': total_ratings,
             'reviews': recent_reviews
-        })
+        }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/cafes/<cafe_id>', methods=['DELETE'])
 def delete_cafe(cafe_id):
     try:
-        # Delete cafe
+        # Delete cafe (items are embedded, so they're deleted automatically)
         cafes_collection.delete_one({'_id': ObjectId(cafe_id)})
-        # Delete associated items
-        items_collection.delete_many({'cafeId': ObjectId(cafe_id)})
         # Delete associated cafe reviews
         cafe_reviews_collection.delete_many({'cafeId': ObjectId(cafe_id)})
-        # Delete associated item reviews (items belong to this cafe)
+        # Delete associated item reviews
         item_reviews_collection.delete_many({'cafeId': ObjectId(cafe_id)})
-        return jsonify({'message': 'Cafe, items, and reviews deleted'})
+        
+        return jsonify({'message': 'Cafe, items, and reviews deleted'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -268,8 +282,8 @@ def get_cafe_stats(cafe_id):
             r_serialized['cafeId'] = {'name': cafe['name'], '_id': str(cafe['_id'])}
             recent_ratings.append(r_serialized)
 
-        # Get items for this cafe with their average ratings
-        items = list(items_collection.find({'cafeId': ObjectId(cafe_id)}))
+        # Get items from embedded array with their average ratings
+        items = cafe.get('items', [])
         items_with_ratings = []
         
         for item in items:
@@ -297,8 +311,8 @@ def get_cafe_stats(cafe_id):
             'totalRatings': total_ratings,
             'averageRating': average_rating,
             'recentRatings': recent_ratings,
-            'items': items_with_ratings  # New: items with their ratings
-        })
+            'items': items_with_ratings
+        }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
