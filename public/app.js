@@ -1,7 +1,7 @@
 // Use production backend URL when deployed, localhost when running locally
 const API_URL = window.location.hostname === 'localhost'
     ? 'http://localhost:3000'
-    : 'https://ace-botany-478821-h7.web.app';  // Replace with actual Cloud Run URL after deployment
+    : 'https://cafe-rater--ace-botany-478821-h7.us-east4.hosted.app';
 
 
 async function loadCafes() {
