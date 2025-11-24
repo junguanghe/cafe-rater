@@ -25,7 +25,13 @@ app.use(cors({
     credentials: true
 }));
 
-app.use(express.static(path.join(__dirname, 'public')));
+// Only serve static files in development (local), not in production (Cloud Run)
+if (process.env.NODE_ENV !== 'production') {
+    app.use(express.static(path.join(__dirname, 'public')));
+    console.log('📁 Serving static files from /public (development mode)');
+} else {
+    console.log('🚫 Static files NOT served (production mode - use Firebase Hosting)');
+}
 
 // --- 1. Database Connection ---
 const connectDB = async () => {
