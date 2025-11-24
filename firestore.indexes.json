@@ -1,0 +1,33 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "cafes",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "name",
+          "order": "ASCENDING"
+        }
+      ],
+      "apiScope": "MONGODB_COMPATIBLE_API",
+      "density": "DENSE",
+      "multikey": true,
+      "unique": true
+    },
+    {
+      "collectionGroup": "caves",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "name",
+          "order": "ASCENDING"
+        }
+      ],
+      "apiScope": "MONGODB_COMPATIBLE_API",
+      "density": "DENSE",
+      "multikey": true,
+      "unique": true
+    }
+  ],
+  "fieldOverrides": []
+}
