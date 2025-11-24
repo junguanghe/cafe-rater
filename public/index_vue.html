@@ -16,228 +16,266 @@
     <div id="app">
         <h1>☕ Google Cafe Rater <span style="font-size: 0.5em; color: #666;">(Vue Edition)</span></h1>
 
-        <!-- Cafe Stats Modal -->
-        <div v-if="showCafeModal" class="modal" style="display: block;">
-            <div class="modal-content">
-                <button @click="closeCafeStats" class="modal-close-btn">&times;</button>
-                <h3 style="margin-top: 0;">Cafe Stats</h3>
+        <!-- Authentication Section (shown when not logged in) -->
+        <div v-if="!currentUser" class="card" style="max-width: 500px; margin: 20px auto;">
+            <h2>Login / Sign Up</h2>
 
-                <div v-if="!cafeStats">Loading...</div>
-                <div v-else>
-                    <div class="flex-between text-center mb-20" style="justify-content: space-around;">
-                        <div>
-                            <h2 style="margin: 0; color: #1a73e8;">{{ cafeStats.totalRatings }}</h2>
-                            <p style="margin: 5px 0; color: #666;">Total Cafe Ratings</p>
-                        </div>
-                        <div>
-                            <h2 style="margin: 0; color: #1a73e8;">{{ cafeStats.averageRating }}</h2>
-                            <p style="margin: 5px 0; color: #666;">Average Cafe Rating</p>
-                        </div>
-                    </div>
+            <div style="margin-bottom: 30px;">
+                <h3>Login</h3>
+                <input v-model="loginEmail" type="email" placeholder="Email" style="width: 100%; margin-bottom: 10px;">
+                <input v-model="loginPassword" type="password" placeholder="Password"
+                    style="width: 100%; margin-bottom: 10px;">
+                <button @click="login" class="btn-green">Login</button>
+            </div>
 
-                    <div class="mt-20">
-                        <h4>🍽️ Menu Items</h4>
-                        <div v-if="!cafeStats.items || cafeStats.items.length === 0" style="color: #777;">No items yet.
+            <div>
+                <h3>Sign Up</h3>
+                <input v-model="signupEmail" type="email" placeholder="Email" style="width: 100%; margin-bottom: 10px;">
+                <input v-model="signupPassword" type="password" placeholder="Password (min 6 characters)"
+                    style="width: 100%; margin-bottom: 10px;">
+                <button @click="signup">Sign Up</button>
+            </div>
+        </div>
+
+        <!-- Main App Content (shown when logged in) -->
+        <div v-if="currentUser">
+            <div style="text-align: right; padding: 10px;">
+                <span>👤 {{ currentUser.email }}</span>
+                <button @click="logout" class="btn-red btn-small" style="margin-left: 10px;">Logout</button>
+            </div>
+
+            <!-- Cafe Stats Modal -->
+            <div v-if="showCafeModal" class="modal" style="display: block;">
+                <div class="modal-content">
+                    <button @click="closeCafeStats" class="modal-close-btn">&times;</button>
+                    <h3 style="margin-top: 0;">Cafe Stats</h3>
+
+                    <div v-if="!cafeStats">Loading...</div>
+                    <div v-else>
+                        <div class="flex-between text-center mb-20" style="justify-content: space-around;">
+                            <div>
+                                <h2 style="margin: 0; color: #1a73e8;">{{ cafeStats.totalRatings }}</h2>
+                                <p style="margin: 5px 0; color: #666;">Total Cafe Ratings</p>
+                            </div>
+                            <div>
+                                <h2 style="margin: 0; color: #1a73e8;">{{ cafeStats.averageRating }}</h2>
+                                <p style="margin: 5px 0; color: #666;">Average Cafe Rating</p>
+                            </div>
                         </div>
-                        <div v-else>
-                            <div v-for="item in cafeStats.items" :key="item._id"
-                                style="padding: 10px; margin: 5px 0; background: #f8f9fa; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <strong>{{ item.name }}</strong>
-                                    <span class="badge" style="margin-left: 5px;">{{ item.type }}</span>
-                                    <span class="text-green" style="margin-left: 10px;">${{ (item.price || 0).toFixed(2)
-                                        }}</span>
-                                </div>
-                                <div class="text-right">
-                                    <div style="font-size: 1.2em; font-weight: bold; color: #1a73e8;">
-                                        {{ item.averageRating }}⭐
+
+                        <div class="mt-20">
+                            <h4>🍽️ Menu Items</h4>
+                            <div v-if="!cafeStats.items || cafeStats.items.length === 0" style="color: #777;">No items
+                                yet.
+                            </div>
+                            <div v-else>
+                                <div v-for="item in cafeStats.items" :key="item._id"
+                                    style="padding: 10px; margin: 5px 0; background: #f8f9fa; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <strong>{{ item.name }}</strong>
+                                        <span class="badge" style="margin-left: 5px;">{{ item.type }}</span>
+                                        <span class="text-green" style="margin-left: 10px;">${{ (item.price ||
+                                            0).toFixed(2)
+                                            }}</span>
                                     </div>
-                                    <div style="font-size: 0.8em; color: #666;">
-                                        {{ item.totalRatings }} rating{{ item.totalRatings !== 1 ? 's' : '' }}
+                                    <div class="text-right">
+                                        <div style="font-size: 1.2em; font-weight: bold; color: #1a73e8;">
+                                            {{ item.averageRating }}⭐
+                                        </div>
+                                        <div style="font-size: 0.8em; color: #666;">
+                                            {{ item.totalRatings }} rating{{ item.totalRatings !== 1 ? 's' : '' }}
+                                        </div>
+                                        <button @click="viewItemStats(item._id)" class="btn-green btn-xs"
+                                            style="margin-top: 5px;">Stats</button>
                                     </div>
-                                    <button @click="viewItemStats(item._id)" class="btn-green btn-xs"
-                                        style="margin-top: 5px;">Stats</button>
                                 </div>
                             </div>
                         </div>
+
+                        <div class="mt-20">
+                            <h4>🕒 Recent Cafe Ratings</h4>
+                            <ul class="cafe-list">
+                                <li v-if="cafeStats.recentRatings.length === 0">No ratings yet.</li>
+                                <li v-for="r in cafeStats.recentRatings" :key="r._id"
+                                    style="padding: 5px 0; border-bottom: 1px solid #eee;">
+                                    <strong>{{ r.rating }}⭐</strong> - "{{ r.comment }}"
+                                    <span style="color: #888; font-size: 0.8em;">({{ new
+                                        Date(r.timestamp).toLocaleDateString() }})</span>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
 
-                    <div class="mt-20">
-                        <h4>🕒 Recent Cafe Ratings</h4>
+                    <div class="modal-footer-close">
+                        <button @click="closeCafeStats" class="btn-secondary">Close</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Item Stats Modal -->
+            <div v-if="showItemModal" class="modal" style="display: block;">
+                <div class="modal-content">
+                    <button @click="closeItemStats" class="modal-close-btn">&times;</button>
+                    <h3 style="margin-top: 0;">Item Stats</h3>
+
+                    <div v-if="!itemStats">Loading...</div>
+                    <div v-else>
+                        <div class="text-center mb-20" style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="font-size: 2.5em; font-weight: bold; color: #1a73e8;">{{ itemStats.averageRating
+                                }}
+                            </div>
+                            <div style="color: #666;">Average Rating</div>
+                            <div style="font-size: 0.9em; color: #888;">({{ itemStats.totalRatings }} total ratings)
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <span class="badge">{{ itemStats.item.type }}</span>
+                                <span class="text-green font-bold" style="margin-left: 10px;">${{ (itemStats.item.price
+                                    ||
+                                    0).toFixed(2) }}</span>
+                            </div>
+                        </div>
+                        <h4>Recent Reviews</h4>
                         <ul class="cafe-list">
-                            <li v-if="cafeStats.recentRatings.length === 0">No ratings yet.</li>
-                            <li v-for="r in cafeStats.recentRatings" :key="r._id"
-                                style="padding: 5px 0; border-bottom: 1px solid #eee;">
-                                <strong>{{ r.rating }}⭐</strong> - "{{ r.comment }}"
-                                <span style="color: #888; font-size: 0.8em;">({{ new
-                                    Date(r.timestamp).toLocaleDateString() }})</span>
+                            <li v-if="itemStats.reviews.length === 0" style="color: #777;">No reviews yet.</li>
+                            <li v-for="r in itemStats.reviews" :key="r._id"
+                                style="padding: 10px 0; border-bottom: 1px solid #eee;">
+                                <div class="flex-between">
+                                    <span class="text-green font-bold" style="color: #fbbc04;">{{ r.rating }}⭐</span>
+                                    <span style="color: #666; font-size: 0.8em;">{{ new
+                                        Date(r.timestamp).toLocaleDateString() }}</span>
+                                </div>
+                                <div style="font-style: italic; color: #555; margin-top: 5px;">"{{ r.comment || '' }}"
+                                </div>
                             </li>
                         </ul>
                     </div>
-                </div>
 
-                <div class="modal-footer-close">
-                    <button @click="closeCafeStats" class="btn-secondary">Close</button>
+                    <div class="modal-footer-close">
+                        <button @click="closeItemStats" class="btn-secondary">Close</button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Item Stats Modal -->
-        <div v-if="showItemModal" class="modal" style="display: block;">
-            <div class="modal-content">
-                <button @click="closeItemStats" class="modal-close-btn">&times;</button>
-                <h3 style="margin-top: 0;">Item Stats</h3>
-
-                <div v-if="!itemStats">Loading...</div>
-                <div v-else>
-                    <div class="text-center mb-20" style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                        <div style="font-size: 2.5em; font-weight: bold; color: #1a73e8;">{{ itemStats.averageRating }}
-                        </div>
-                        <div style="color: #666;">Average Rating</div>
-                        <div style="font-size: 0.9em; color: #888;">({{ itemStats.totalRatings }} total ratings)</div>
-                        <div style="margin-top: 10px;">
-                            <span class="badge">{{ itemStats.item.type }}</span>
-                            <span class="text-green font-bold" style="margin-left: 10px;">${{ (itemStats.item.price ||
-                                0).toFixed(2) }}</span>
-                        </div>
-                    </div>
-                    <h4>Recent Reviews</h4>
-                    <ul class="cafe-list">
-                        <li v-if="itemStats.reviews.length === 0" style="color: #777;">No reviews yet.</li>
-                        <li v-for="r in itemStats.reviews" :key="r._id"
-                            style="padding: 10px 0; border-bottom: 1px solid #eee;">
-                            <div class="flex-between">
-                                <span class="text-green font-bold" style="color: #fbbc04;">{{ r.rating }}⭐</span>
-                                <span style="color: #666; font-size: 0.8em;">{{ new
-                                    Date(r.timestamp).toLocaleDateString() }}</span>
-                            </div>
-                            <div style="font-style: italic; color: #555; margin-top: 5px;">"{{ r.comment || '' }}"</div>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="modal-footer-close">
-                    <button @click="closeItemStats" class="btn-secondary">Close</button>
-                </div>
+            <!-- Summary Table -->
+            <div class="card">
+                <h3>Cafe Ratings Summary</h3>
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Cafe Name</th>
+                            <th>Average Rating</th>
+                            <th># Reviews</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="cafe in cafes" :key="cafe._id">
+                            <td>{{ cafe.name }}</td>
+                            <td>
+                                <span class="text-green font-bold">{{ cafe.averageRating }}⭐</span>
+                            </td>
+                            <td>{{ cafe.totalRatings }}</td>
+                            <td>
+                                <button @click="viewCafeStats(cafe._id)" class="btn-green btn-small">Stats</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-        </div>
 
-        <!-- Summary Table -->
-        <div class="card">
-            <h3>Cafe Ratings Summary</h3>
-            <table class="stats-table">
-                <thead>
-                    <tr>
-                        <th>Cafe Name</th>
-                        <th>Average Rating</th>
-                        <th># Reviews</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="cafe in cafes" :key="cafe._id">
-                        <td>{{ cafe.name }}</td>
-                        <td>
-                            <span class="text-green font-bold">{{ cafe.averageRating }}⭐</span>
-                        </td>
-                        <td>{{ cafe.totalRatings }}</td>
-                        <td>
-                            <button @click="viewCafeStats(cafe._id)" class="btn-green btn-small">Stats</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+            <!-- Add Cafe Form -->
+            <div class="card">
+                <h3>Add a New Cafe</h3>
+                <input v-model="newCafe.name" type="text" placeholder="Cafe Name (e.g. Charlie's)">
+                <input v-model="newCafe.building" type="text" placeholder="Building (e.g. 43)">
+                <button @click="addCafe">Add Cafe</button>
+            </div>
 
-        <!-- Add Cafe Form -->
-        <div class="card">
-            <h3>Add a New Cafe</h3>
-            <input v-model="newCafe.name" type="text" placeholder="Cafe Name (e.g. Charlie's)">
-            <input v-model="newCafe.building" type="text" placeholder="Building (e.g. 43)">
-            <button @click="addCafe">Add Cafe</button>
-        </div>
+            <!-- Cafe List -->
+            <div class="card">
+                <h3>All Cafes</h3>
+                <div v-if="cafes.length === 0">Loading...</div>
 
-        <!-- Cafe List -->
-        <div class="card">
-            <h3>All Cafes</h3>
-            <div v-if="cafes.length === 0">Loading...</div>
-
-            <div v-for="cafe in cafes" :key="cafe._id" class="cafe-item">
-                <div class="flex-between">
-                    <div>
-                        <strong>{{ cafe.name }}</strong> (Bldg {{ cafe.building }})
+                <div v-for="cafe in cafes" :key="cafe._id" class="cafe-item">
+                    <div class="flex-between">
+                        <div>
+                            <strong>{{ cafe.name }}</strong> (Bldg {{ cafe.building }})
+                        </div>
+                        <div>
+                            <button @click="deleteCafe(cafe._id)" class="btn-red btn-small">Delete</button>
+                        </div>
                     </div>
-                    <div>
-                        <button @click="deleteCafe(cafe._id)" class="btn-red btn-small">Delete</button>
-                    </div>
-                </div>
 
-                <!-- Items Section -->
-                <div class="items-section">
-                    <h4>Menu Items</h4>
-                    <ul class="cafe-list">
-                        <li v-if="!cafe.items || cafe.items.length === 0" style="color: #777;">No items yet.</li>
-                        <li v-else v-for="item in cafe.items" :key="item._id"
-                            style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #eee;">
-                            <div class="flex-start">
-                                <div>
-                                    <div class="font-bold">{{ item.name }}</div>
-                                    <div style="font-size: 0.85em; color: #666;">
-                                        <span class="badge" style="margin-right: 5px;">{{ item.type || 'other' }}</span>
-                                        <span class="text-green font-bold">${{ (item.price || 0).toFixed(2) }}</span>
+                    <!-- Items Section -->
+                    <div class="items-section">
+                        <h4>Menu Items</h4>
+                        <ul class="cafe-list">
+                            <li v-if="!cafe.items || cafe.items.length === 0" style="color: #777;">No items yet.</li>
+                            <li v-else v-for="item in cafe.items" :key="item._id"
+                                style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #eee;">
+                                <div class="flex-start">
+                                    <div>
+                                        <div class="font-bold">{{ item.name }}</div>
+                                        <div style="font-size: 0.85em; color: #666;">
+                                            <span class="badge" style="margin-right: 5px;">{{ item.type || 'other'
+                                                }}</span>
+                                            <span class="text-green font-bold">${{ (item.price || 0).toFixed(2)
+                                                }}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <button @click="deleteItem(item._id)" class="btn-red btn-xs"
+                                            style="color: white; border: none; cursor: pointer;">Delete</button>
                                     </div>
                                 </div>
-                                <div>
-                                    <button @click="deleteItem(item._id)" class="btn-red btn-xs"
-                                        style="color: white; border: none; cursor: pointer;">Delete</button>
+                                <div class="flex-gap"
+                                    v-if="cafeInputs[cafe._id] && cafeInputs[cafe._id].itemRatings[item._id]">
+                                    <input v-model="cafeInputs[cafe._id].itemRatings[item._id].score" type="number"
+                                        placeholder="1-5" min="1" max="5" style="width: 50px; padding: 5px;">
+                                    <input v-model="cafeInputs[cafe._id].itemRatings[item._id].comment" type="text"
+                                        placeholder="Comment..." style="width: 150px; padding: 5px;">
+                                    <button @click="rateItem(cafe._id, item._id)" class="btn-small">Rate Item</button>
                                 </div>
-                            </div>
-                            <div class="flex-gap"
-                                v-if="cafeInputs[cafe._id] && cafeInputs[cafe._id].itemRatings[item._id]">
-                                <input v-model="cafeInputs[cafe._id].itemRatings[item._id].score" type="number"
-                                    placeholder="1-5" min="1" max="5" style="width: 50px; padding: 5px;">
-                                <input v-model="cafeInputs[cafe._id].itemRatings[item._id].comment" type="text"
-                                    placeholder="Comment..." style="width: 150px; padding: 5px;">
-                                <button @click="rateItem(cafe._id, item._id)" class="btn-small">Rate Item</button>
-                            </div>
-                        </li>
-                    </ul>
+                            </li>
+                        </ul>
 
-                    <!-- Add Item Form -->
-                    <div style="margin-top: 10px;" v-if="cafeInputs[cafe._id]">
-                        <div class="flex-gap" style="margin-bottom: 5px;">
-                            <input v-model="cafeInputs[cafe._id].newItem.name" type="text" placeholder="Item Name"
-                                style="width: 150px;">
-                            <input v-model="cafeInputs[cafe._id].newItem.price" type="number" placeholder="Price"
-                                step="0.01" style="width: 80px;">
-                            <select v-model="cafeInputs[cafe._id].newItem.type" style="width: 100px;">
-                                <option value="entree">Entree</option>
-                                <option value="drink">Drink</option>
-                                <option value="side">Side</option>
-                                <option value="dessert">Dessert</option>
-                                <option value="other">Other</option>
-                            </select>
-                            <button @click="addItem(cafe._id)" class="btn-small">Add Item</button>
+                        <!-- Add Item Form -->
+                        <div style="margin-top: 10px;" v-if="cafeInputs[cafe._id]">
+                            <div class="flex-gap" style="margin-bottom: 5px;">
+                                <input v-model="cafeInputs[cafe._id].newItem.name" type="text" placeholder="Item Name"
+                                    style="width: 150px;">
+                                <input v-model="cafeInputs[cafe._id].newItem.price" type="number" placeholder="Price"
+                                    step="0.01" style="width: 80px;">
+                                <select v-model="cafeInputs[cafe._id].newItem.type" style="width: 100px;">
+                                    <option value="entree">Entree</option>
+                                    <option value="drink">Drink</option>
+                                    <option value="side">Side</option>
+                                    <option value="dessert">Dessert</option>
+                                    <option value="other">Other</option>
+                                </select>
+                                <button @click="addItem(cafe._id)" class="btn-small">Add Item</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rate Cafe Section -->
+                    <div class="rate-section" v-if="cafeInputs[cafe._id]">
+                        <strong>Rate this Cafe:</strong>
+                        <div style="margin-top: 5px;">
+                            <input v-model="cafeInputs[cafe._id].rating.score" type="number" placeholder="1-5" min="1"
+                                max="5" style="width: 60px;">
+                            <input v-model="cafeInputs[cafe._id].rating.comment" type="text"
+                                placeholder="Comment (max 200 chars)" maxlength="200" style="width: 200px;">
+                            <button @click="rateCafe(cafe._id)" class="btn-small">Rate Cafe</button>
                         </div>
                     </div>
                 </div>
-
-                <!-- Rate Cafe Section -->
-                <div class="rate-section" v-if="cafeInputs[cafe._id]">
-                    <strong>Rate this Cafe:</strong>
-                    <div style="margin-top: 5px;">
-                        <input v-model="cafeInputs[cafe._id].rating.score" type="number" placeholder="1-5" min="1"
-                            max="5" style="width: 60px;">
-                        <input v-model="cafeInputs[cafe._id].rating.comment" type="text"
-                            placeholder="Comment (max 200 chars)" maxlength="200" style="width: 200px;">
-                        <button @click="rateCafe(cafe._id)" class="btn-small">Rate Cafe</button>
-                    </div>
-                </div>
             </div>
-        </div>
-    </div>
+        </div> <!-- Close currentUser div -->
 
-    <script src="vue_app.js"></script>
+    </div> <!-- Close app div -->
+
+    <script type="module" src="vue_app.js"></script>
 </body>
 
 </html>

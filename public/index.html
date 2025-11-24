@@ -14,62 +14,92 @@
 
     <h1>☕ Google Cafe Rater</h1>
 
-    <!-- Cafe Stats Modal -->
-    <div id="cafeStatsModal" class="modal">
-        <div class="modal-content">
-            <button onclick="closeCafeStats()" class="modal-close-btn">&times;</button>
-            <h3 id="cafeStatsTitle" style="margin-top: 0;">Cafe Stats</h3>
-            <div id="cafeStatsContent">Loading...</div>
-            <div class="modal-footer-close">
-                <button onclick="closeCafeStats()" class="btn-secondary">Close</button>
-            </div>
+    <!-- Authentication Section (shown when not logged in) -->
+    <div id="authSection" class="card" style="max-width: 500px; margin: 20px auto;">
+        <h2>Login / Sign Up</h2>
+
+        <div style="margin-bottom: 30px;">
+            <h3>Login</h3>
+            <input type="email" id="loginEmail" placeholder="Email" style="width: 100%; margin-bottom: 10px;">
+            <input type="password" id="loginPassword" placeholder="Password" style="width: 100%; margin-bottom: 10px;">
+            <button onclick="login()" class="btn-green">Login</button>
+        </div>
+
+        <div>
+            <h3>Sign Up</h3>
+            <input type="email" id="signupEmail" placeholder="Email" style="width: 100%; margin-bottom: 10px;">
+            <input type="password" id="signupPassword" placeholder="Password (min 6 characters)"
+                style="width: 100%; margin-bottom: 10px;">
+            <button onclick="signup()">Sign Up</button>
         </div>
     </div>
 
-    <!-- Form to Add a New Cafe -->
-    <div class="card">
-        <h3>Cafe Ratings Summary</h3>
-        <table class="stats-table">
-            <thead>
-                <tr>
-                    <th>Cafe Name</th>
-                    <th>Average Rating</th>
-                    <th># Reviews</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="cafeStatsTableBody">
-                <!-- Rows will be populated here -->
-            </tbody>
-        </table>
-    </div>
+    <!-- Main App Content (shown when logged in) -->
+    <div id="appContent" style="display: none;">
+        <div style="text-align: right; padding: 10px;">
+            <span>👤 <span id="userEmail"></span></span>
+            <button onclick="logout()" class="btn-red btn-small" style="margin-left: 10px;">Logout</button>
+        </div>
 
-    <div class="card">
-        <h3>Add a New Cafe</h3>
-        <input type="text" id="cafeName" placeholder="Cafe Name (e.g. Charlie's)">
-        <input type="text" id="building" placeholder="Building (e.g. 43)">
-        <button onclick="addCafe()">Add Cafe</button>
-    </div>
-
-    <!-- List of Cafes -->
-    <!-- Item Stats Modal -->
-    <div id="itemStatsModal" class="modal">
-        <div class="modal-content">
-            <button onclick="closeItemStats()" class="modal-close-btn">&times;</button>
-            <h3 id="itemStatsTitle" style="margin-top: 0;">Item Stats</h3>
-            <div id="itemStatsContent">Loading...</div>
-            <div class="modal-footer-close">
-                <button onclick="closeItemStats()" class="btn-secondary">Close</button>
+        <!-- Cafe Stats Modal -->
+        <div id="cafeStatsModal" class="modal">
+            <div class="modal-content">
+                <button onclick="closeCafeStats()" class="modal-close-btn">&times;</button>
+                <h3 id="cafeStatsTitle" style="margin-top: 0;">Cafe Stats</h3>
+                <div id="cafeStatsContent">Loading...</div>
+                <div class="modal-footer-close">
+                    <button onclick="closeCafeStats()" class="btn-secondary">Close</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="card">
-        <h3>All Cafes</h3>
-        <div id="cafeList">Loading...</div>
-    </div>
+        <!-- Form to Add a New Cafe -->
+        <div class="card">
+            <h3>Cafe Ratings Summary</h3>
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>Cafe Name</th>
+                        <th>Average Rating</th>
+                        <th># Reviews</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="cafeStatsTableBody">
+                    <!-- Rows will be populated here -->
+                </tbody>
+            </table>
+        </div>
 
-    <!-- Script to talk to your Backend -->
+        <div class="card">
+            <h3>Add a New Cafe</h3>
+            <input type="text" id="cafeName" placeholder="Cafe Name (e.g. Charlie's)">
+            <input type="text" id="building" placeholder="Building (e.g. 43)">
+            <button onclick="addCafe()">Add Cafe</button>
+        </div>
+
+        <!-- List of Cafes -->
+        <!-- Item Stats Modal -->
+        <div id="itemStatsModal" class="modal">
+            <div class="modal-content">
+                <button onclick="closeItemStats()" class="modal-close-btn">&times;</button>
+                <h3 id="itemStatsTitle" style="margin-top: 0;">Item Stats</h3>
+                <div id="itemStatsContent">Loading...</div>
+                <div class="modal-footer-close">
+                    <button onclick="closeItemStats()" class="btn-secondary">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>All Cafes</h3>
+            <div id="cafeList">Loading...</div>
+        </div>
+
+    </div> <!-- Close appContent -->
+
+    <!-- Scripts -->
+    <script type="module" src="auth.js"></script>
     <script src="app.js"></script>
 </body>
 

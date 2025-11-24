@@ -1,5 +1,14 @@
 const { createApp, ref, onMounted, reactive } = Vue;
 
+// Import Firebase Auth
+import { auth } from './firebase-config.js';
+import {
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
 // Use production backend URL when deployed, localhost when running locally
 const API_URL = window.location.hostname === 'localhost'
     ? 'http://localhost:3000'
@@ -8,6 +17,13 @@ const API_URL = window.location.hostname === 'localhost'
 
 createApp({
     setup() {
+        // --- Authentication State ---
+        const currentUser = ref(null);
+        const loginEmail = ref('');
+        const loginPassword = ref('');
+        const signupEmail = ref('');
+        const signupPassword = ref('');
+
         // --- State ---
         const cafes = ref([]);
         const newCafe = reactive({ name: '', building: '' });
@@ -196,12 +212,58 @@ createApp({
             showItemModal.value = false;
         };
 
+        // --- Authentication Methods ---
+        const login = async () => {
+            try {
+                await signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
+                loginEmail.value = '';
+                loginPassword.value = '';
+            } catch (error) {
+                alert('Login failed: ' + error.message);
+            }
+        };
+
+        const signup = async () => {
+            try {
+                await createUserWithEmailAndPassword(auth, signupEmail.value, signupPassword.value);
+                alert('Sign up successful!');
+                signupEmail.value = '';
+                signupPassword.value = '';
+            } catch (error) {
+                alert('Sign up failed: ' + error.message);
+            }
+        };
+
+        const logout = async () => {
+            try {
+                await signOut(auth);
+                alert('Logged out successfully');
+            } catch (error) {
+                alert('Logout failed: ' + error.message);
+            }
+        };
+
         // Lifecycle
         onMounted(() => {
+            // Listen for auth state changes
+            onAuthStateChanged(auth, (user) => {
+                currentUser.value = user;
+            });
+
             loadCafes();
         });
 
         return {
+            // Auth
+            currentUser,
+            loginEmail,
+            loginPassword,
+            signupEmail,
+            signupPassword,
+            login,
+            signup,
+            logout,
+            // App
             cafes,
             newCafe,
             cafeInputs,
