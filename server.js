@@ -6,7 +6,24 @@ const path = require('path');
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+
+// CORS: Allow both local development and production frontend
+const allowedOrigins = [
+    'http://localhost:3000',
+    'https://ace-botany-478821-h7.web.app'
+];
+app.use(cors({
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
+}));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
